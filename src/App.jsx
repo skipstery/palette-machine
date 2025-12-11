@@ -64,6 +64,7 @@ import { generatePalette } from "./utils/paletteGenerator";
 import {
   hexToRgb,
   hexToGrayscale,
+  cssColorToHex,
 } from "./utils/colorConversions";
 
 // ✅ Refactored: Imported contrast utilities
