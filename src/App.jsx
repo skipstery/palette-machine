@@ -62,6 +62,25 @@ import {
 // ✅ Refactored: Imported export generators
 import { generateExport } from "./lib/exportGenerators";
 
+// ✅ Refactored: Imported color conversion utilities
+import {
+  oklchToLinearRgb,
+  oklchToP3,
+  linearToGamma,
+  isInGamut,
+  clamp,
+  rgbToHex,
+  hexToRgb,
+  cssColorToHex,
+  hexToGrayscale,
+} from "./utils/colorConversions";
+
+// ✅ Refactored: Imported contrast utilities
+import {
+  getContrast as getContrastUtil,
+  formatContrast as formatContrastUtil,
+} from "./utils/contrast";
+
 const OKLCHPalette = () => {
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [exportFormat, setExportFormat] = useState("json-srgb");
@@ -816,185 +835,20 @@ const OKLCHPalette = () => {
   const inputBg = isDark ? "#333333" : "#ffffff";
   const borderColor = isDark ? "#404040" : "#e5e5e5";
 
-  // Color conversion functions
-  const oklchToLinearRgb = (l, c, h) => {
-    const L = l / 100,
-      a = c * Math.cos((h * Math.PI) / 180),
-      b = c * Math.sin((h * Math.PI) / 180);
-    let l_ = L + 0.3963377774 * a + 0.2158037573 * b,
-      m_ = L - 0.1055613458 * a - 0.0638541728 * b,
-      s_ = L - 0.0894841775 * a - 1.291485548 * b;
-    let l3 = l_ * l_ * l_,
-      m3 = m_ * m_ * m_,
-      s3 = s_ * s_ * s_;
-    return [
-      +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3,
-      -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3,
-      -0.0041960863 * l3 - 0.7034186147 * m3 + 1.707614701 * s3,
-    ];
-  };
+  // ✅ Color conversion functions imported from utils/colorConversions
+  // ✅ Contrast functions imported from utils/contrast
 
-  const linearToGamma = (c) =>
-    c <= 0.0031308 ? 12.92 * c : 1.055 * Math.pow(c, 1 / 2.4) - 0.055;
-
-  const isInGamut = (r, g, b) =>
-    r >= -0.0001 &&
-    r <= 1.0001 &&
-    g >= -0.0001 &&
-    g <= 1.0001 &&
-    b >= -0.0001 &&
-    b <= 1.0001;
-
-  const clamp = (v) => Math.max(0, Math.min(1, v));
-
-  // Correct P3 conversion - from OKLCH to Display P3 directly
-  const oklchToP3 = (l, c, h) => {
-    const L = l / 100,
-      a = c * Math.cos((h * Math.PI) / 180),
-      b = c * Math.sin((h * Math.PI) / 180);
-    let l_ = L + 0.3963377774 * a + 0.2158037573 * b;
-    let m_ = L - 0.1055613458 * a - 0.0638541728 * b;
-    let s_ = L - 0.0894841775 * a - 1.291485548 * b;
-    let l3 = l_ * l_ * l_,
-      m3 = m_ * m_ * m_,
-      s3 = s_ * s_ * s_;
-    // Linear sRGB
-    let rLin = +4.0767416621 * l3 - 3.3077115913 * m3 + 0.2309699292 * s3;
-    let gLin = -1.2684380046 * l3 + 2.6097574011 * m3 - 0.3413193965 * s3;
-    let bLin = -0.0041960863 * l3 - 0.7034186147 * m3 + 1.707614701 * s3;
-    // Convert linear sRGB to linear P3
-    let rP3Lin = 0.8224621 * rLin + 0.177538 * gLin + 0.0 * bLin;
-    let gP3Lin = 0.0331942 * rLin + 0.9668058 * gLin + 0.0 * bLin;
-    let bP3Lin = 0.0170826 * rLin + 0.0723974 * gLin + 0.91052 * bLin;
-    return [rP3Lin, gP3Lin, bP3Lin];
-  };
-
-  const rgbToHex = (r, g, b) => {
-    const toHex = (n) =>
-      Math.round(clamp(n) * 255)
-        .toString(16)
-        .padStart(2, "0");
-    return `#${toHex(r)}${toHex(g)}${toHex(b)}`;
-  };
-
-  // Parse any CSS color (hex or oklch) to hex for contrast calculations
-  const cssColorToHex = (color) => {
-    if (!color) return "#000000";
-    // Already hex
-    if (color.startsWith("#")) return color;
-    // OKLCH format: oklch(L C H) or oklch(L% C H)
-    const oklchMatch = color.match(
-      /oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)\s*\)/i
-    );
-    if (oklchMatch) {
-      let L = parseFloat(oklchMatch[1]);
-      if (oklchMatch[2] !== "%" && L <= 1) L = L * 100; // Convert 0-1 to percentage
-      const C = parseFloat(oklchMatch[3]);
-      const H = parseFloat(oklchMatch[4]);
-      const [rLin, gLin, bLin] = oklchToLinearRgb(L, C, H);
-      return rgbToHex(
-        linearToGamma(rLin),
-        linearToGamma(gLin),
-        linearToGamma(bLin)
-      );
-    }
-    // Fallback
-    return "#000000";
-  };
-
-  // Get background colors as hex for contrast calculations
+  // Get background color as hex for contrast calculations
   const currentBgHex = cssColorToHex(currentBg);
 
-  const hexToRgb = (hex) => {
-    const r = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
-    return r
-      ? {
-          r: parseInt(r[1], 16) / 255,
-          g: parseInt(r[2], 16) / 255,
-          b: parseInt(r[3], 16) / 255,
-        }
-      : { r: 1, g: 1, b: 1 };
-  };
-
-  const calculateAPCA = (textHex, bgHex) => {
-    const txt = hexToRgb(textHex),
-      bg = hexToRgb(bgHex);
-    const toLinear = (c) =>
-      c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    const Ytxt =
-      0.2126729 * toLinear(txt.r) +
-      0.7151522 * toLinear(txt.g) +
-      0.072175 * toLinear(txt.b);
-    const Ybg =
-      0.2126729 * toLinear(bg.r) +
-      0.7151522 * toLinear(bg.g) +
-      0.072175 * toLinear(bg.b);
-    if (Math.abs(Ybg - Ytxt) < 0.0005) return 0;
-    const blkThrs = 0.022,
-      blkClmp = 1.414,
-      loClip = 0.1;
-    let SAPC;
-    if (Ybg > Ytxt) {
-      const Sbg =
-        Ybg >= blkThrs
-          ? Math.pow(Ybg, 0.56)
-          : Ybg + Math.pow(blkThrs - Ybg, blkClmp);
-      const Stxt =
-        Ytxt >= blkThrs
-          ? Math.pow(Ytxt, 0.57)
-          : Ytxt + Math.pow(blkThrs - Ytxt, blkClmp);
-      SAPC = (Sbg - Stxt) * 1.14;
-    } else {
-      const Sbg =
-        Ybg >= blkThrs
-          ? Math.pow(Ybg, 0.65)
-          : Ybg + Math.pow(blkThrs - Ybg, blkClmp);
-      const Stxt =
-        Ytxt >= blkThrs
-          ? Math.pow(Ytxt, 0.62)
-          : Ytxt + Math.pow(blkThrs - Ytxt, blkClmp);
-      SAPC = (Sbg - Stxt) * 1.14;
-    }
-    return Math.abs(SAPC) < loClip ? 0 : SAPC * 100;
-  };
-
-  const calculateWCAG = (fgHex, bgHex) => {
-    const fg = hexToRgb(fgHex),
-      bg = hexToRgb(bgHex);
-    const toLinear = (c) =>
-      c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
-    const Lfg =
-      0.2126 * toLinear(fg.r) +
-      0.7152 * toLinear(fg.g) +
-      0.0722 * toLinear(fg.b);
-    const Lbg =
-      0.2126 * toLinear(bg.r) +
-      0.7152 * toLinear(bg.g) +
-      0.0722 * toLinear(bg.b);
-    return (Math.max(Lfg, Lbg) + 0.05) / (Math.min(Lfg, Lbg) + 0.05);
-  };
-
+  // Wrapper for getContrast that uses component state (contrastAlgo, contrastDirection)
   const getContrast = (colorHex, compareHex) => {
-    if (!colorHex || !compareHex) return 0;
-    if (contrastAlgo === "APCA") {
-      return contrastDirection === "text-on-bg"
-        ? calculateAPCA(colorHex, compareHex)
-        : calculateAPCA(compareHex, colorHex);
-    }
-    return calculateWCAG(colorHex, compareHex);
+    return getContrastUtil(colorHex, compareHex, contrastAlgo, contrastDirection);
   };
 
-  const formatContrast = (val) =>
-    contrastAlgo === "APCA"
-      ? `${Math.abs(val).toFixed(0)}`
-      : `${val.toFixed(1)}`;
-
-  // Convert hex to grayscale
-  const hexToGrayscale = (hex) => {
-    const rgb = hexToRgb(hex);
-    // Use luminance formula for perceptual grayscale
-    const gray = 0.2126 * rgb.r + 0.7152 * rgb.g + 0.0722 * rgb.b;
-    return rgbToHex(gray, gray, gray);
+  // Wrapper for formatContrast that uses component state (contrastAlgo)
+  const formatContrast = (val) => {
+    return formatContrastUtil(val, contrastAlgo);
   };
 
   const palette = useMemo(() => {
