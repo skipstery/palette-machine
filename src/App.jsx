@@ -43,21 +43,10 @@ import {
 } from "./components/UI";
 
 // ✅ Refactored: Imported helper utilities
-import {
-  parseAlphaString,
-  alphasToString,
-  copyToClipboard as copyToClipboardUtil,
-  downloadFile as downloadFileUtil,
-  countTokens,
-} from "./utils/helpers";
+import { parseAlphaString, alphasToString } from "./utils/helpers";
 
 // ✅ Refactored: Imported file analysis utilities
-import {
-  analyzePaletteFile,
-  analyzeSemanticFile,
-  createHueMapping,
-  createShadeSourceMap,
-} from "./utils/fileAnalysis";
+import { analyzePaletteFile, analyzeSemanticFile } from "./utils/fileAnalysis";
 
 // ✅ Refactored: Imported export generators
 import { generateExport } from "./lib/exportGenerators";
@@ -271,238 +260,12 @@ const OKLCHPalette = () => {
     dark: "1000",
   });
 
-  // Helper: Parse alpha string like "0-30,35,40,45,50" into array of numbers
-  const parseAlphaString = useCallback((str) => {
-    if (!str || !str.trim()) return [];
-    const result = [];
-    const parts = str
-      .split(",")
-      .map((s) => s.trim())
-      .filter(Boolean);
-    parts.forEach((part) => {
-      if (part.includes("-")) {
-        const [start, end] = part.split("-").map(Number);
-        if (!isNaN(start) && !isNaN(end)) {
-          for (let i = start; i <= end; i++) result.push(i);
-        }
-      } else {
-        const num = Number(part);
-        if (!isNaN(num)) result.push(num);
-      }
-    });
-    return [...new Set(result)].sort((a, b) => a - b);
-  }, []);
+  // ✅ parseAlphaString, alphasToString imported from utils/helpers
+  // ✅ analyzePaletteFile imported from utils/fileAnalysis
 
-  // Helper: Convert array of numbers to compact string like "0-30,35,40"
-  const alphasToString = useCallback((alphas) => {
-    if (!alphas || !alphas.length) return "";
-    const sorted = [...new Set(alphas)].sort((a, b) => a - b);
-    const ranges = [];
-    let start = sorted[0],
-      end = sorted[0];
-
-    for (let i = 1; i <= sorted.length; i++) {
-      if (sorted[i] === end + 1) {
-        end = sorted[i];
-      } else {
-        if (start === end) ranges.push(String(start));
-        else if (end === start + 1) ranges.push(`${start},${end}`);
-        else ranges.push(`${start}-${end}`);
-        start = end = sorted[i];
-      }
-    }
-    return ranges.join(",");
-  }, []);
-
-  // Helper: Analyze uploaded palette file
-  const analyzePaletteFile = useCallback((jsonStr) => {
-    try {
-      const data = JSON.parse(jsonStr);
-      const hueNames = new Set();
-      const shades = new Set();
-      let colorCount = 0;
-
-      Object.keys(data).forEach((key) => {
-        if (key.startsWith("$")) return;
-
-        // Check for flat format: --hue-shade
-        if (key.startsWith("--")) {
-          const match = key.match(/^--([a-zA-Z]+)-(\d+)$/);
-          if (match) {
-            hueNames.add(match[1]); // hue name
-            shades.add(match[2]); // shade number
-            colorCount++;
-          }
-          return;
-        }
-
-        // Old nested format: hue/shade
-        if (typeof data[key] === "object") {
-          hueNames.add(key);
-          Object.keys(data[key])
-            .filter((k) => !k.startsWith("$"))
-            .forEach((shade) => {
-              shades.add(shade);
-              colorCount++;
-            });
-        }
-      });
-
-      return {
-        hues: [...hueNames],
-        shades: [...shades].sort((a, b) => Number(a) - Number(b)),
-        colorCount,
-        raw: data,
-      };
-    } catch (e) {
-      return { error: e.message };
-    }
-  }, []);
-
-  // Helper: Analyze uploaded semantic (light/dark) file
-  const analyzeSemanticFile = useCallback(
-    (jsonStr) => {
-      try {
-        const data = JSON.parse(jsonStr);
-        const result = {
-          intents: [],
-          grounds: [],
-          alphas: {},
-          hues: [],
-          excluded: [],
-          raw: data,
-        };
-
-        // Find all top-level keys
-        Object.keys(data).forEach((key) => {
-          if (key.startsWith("$")) return;
-          if (key.startsWith(exclusionPattern)) {
-            result.excluded.push(key);
-            return;
-          }
-
-          const val = data[key];
-          if (!val || typeof val !== "object") return;
-
-          // Check if it's a ground token
-          if (["ground", "ground1", "ground2"].includes(key)) {
-            const alphaKeys = Object.keys(val).filter(
-              (k) => !k.startsWith("$") && !isNaN(Number(k))
-            );
-            result.grounds.push(key);
-            result.alphas[key] = alphaKeys.map(Number).sort((a, b) => a - b);
-            return;
-          }
-
-          // Check for stark, black, white, neutral
-          if (["stark", "black", "white", "neutral"].includes(key)) {
-            const alphaKeys = Object.keys(val).filter(
-              (k) => !k.startsWith("$") && !isNaN(Number(k))
-            );
-            result.alphas[key] = alphaKeys.map(Number).sort((a, b) => a - b);
-            return;
-          }
-
-          // Check if it looks like an intent (has shade subgroup or direct alphas)
-          const subKeys = Object.keys(val).filter((k) => !k.startsWith("$"));
-
-          // IMPORTANT: Direct numbers under intent are ALPHAS (e.g., primary/3 = 3% alpha)
-          // Only numbers in a `shade` subgroup are SHADES (e.g., primary/shade/100 = shade 100)
-          const directAlphaKeys = subKeys.filter((k) => !isNaN(Number(k)));
-          const hasDirectAlphas = directAlphaKeys.length > 0;
-
-          // Check for shade subgroup
-          const hasShadeGroup =
-            subKeys.includes("shade") && typeof val.shade === "object";
-          const shadeGroupKeys = hasShadeGroup
-            ? Object.keys(val.shade).filter((k) => !k.startsWith("$"))
-            : [];
-          const shadeKeys = shadeGroupKeys.filter((k) => !isNaN(Number(k)));
-          const hasShades = shadeKeys.length > 0;
-
-          // Also check for step subgroup (legacy)
-          const hasStepGroup =
-            subKeys.includes("step") && typeof val.step === "object";
-          const stepGroupKeys = hasStepGroup
-            ? Object.keys(val.step).filter((k) => !k.startsWith("$"))
-            : [];
-          const stepKeys = stepGroupKeys.filter((k) => !isNaN(Number(k)));
-
-          // Combine shade sources
-          const allShadeKeys = [...new Set([...shadeKeys, ...stepKeys])];
-
-          if (hasShades || hasDirectAlphas || stepKeys.length > 0) {
-            // Collect alphas per shade (nested within shade subgroup)
-            const shadeAlphas = {};
-            const shadeSource = hasShadeGroup
-              ? val.shade
-              : hasStepGroup
-              ? val.step
-              : null;
-            if (shadeSource) {
-              allShadeKeys.forEach((shade) => {
-                if (
-                  typeof shadeSource[shade] === "object" &&
-                  shadeSource[shade].$type !== "color"
-                ) {
-                  // Has nested alphas under this shade
-                  const alphaKeys = Object.keys(shadeSource[shade]).filter(
-                    (k) => !k.startsWith("$") && !isNaN(Number(k))
-                  );
-                  shadeAlphas[shade] = alphaKeys
-                    .map(Number)
-                    .sort((a, b) => a - b);
-                }
-              });
-            }
-
-            // Capture direct alpha values on the intent itself
-            const intentAlphas = directAlphaKeys
-              .map(Number)
-              .sort((a, b) => a - b);
-
-            // Determine if this is an intent or a primitive hue
-            if (
-              ["primary", "danger", "warning", "success", "neutral"].includes(
-                key
-              )
-            ) {
-              result.intents.push({
-                name: key,
-                shades: allShadeKeys.sort((a, b) => Number(a) - Number(b)),
-                alphas: shadeAlphas,
-                intentAlphas: intentAlphas, // Direct alphas on the intent (e.g., primary/3, primary/5)
-              });
-            } else {
-              result.hues.push({
-                name: key,
-                shades: allShadeKeys.sort((a, b) => Number(a) - Number(b)),
-                alphas: shadeAlphas,
-                intentAlphas: intentAlphas,
-              });
-            }
-          }
-        });
-
-        // Check for on-colors
-        if (data.on && typeof data.on === "object") {
-          Object.keys(data.on).forEach((onKey) => {
-            if (!onKey.startsWith("$")) {
-              const alphaKeys = Object.keys(data.on[onKey] || {}).filter(
-                (k) => !k.startsWith("$") && !isNaN(Number(k))
-              );
-              result.alphas[`on-${onKey}`] = alphaKeys
-                .map(Number)
-                .sort((a, b) => a - b);
-            }
-          });
-        }
-
-        return result;
-      } catch (e) {
-        return { error: e.message };
-      }
-    },
+  // Wrapper for analyzeSemanticFile that passes exclusionPattern
+  const handleAnalyzeSemanticFile = useCallback(
+    (jsonStr) => analyzeSemanticFile(jsonStr, exclusionPattern),
     [exclusionPattern]
   );
 
@@ -547,7 +310,7 @@ const OKLCHPalette = () => {
   const handleLightFileUpload = useCallback(
     (jsonStr) => {
       setFigmaLightFile(jsonStr);
-      const analysis = analyzeSemanticFile(jsonStr);
+      const analysis = handleAnalyzeSemanticFile(jsonStr);
       setParsedLightFile(analysis);
 
       // Auto-populate alpha config from file
@@ -588,16 +351,16 @@ const OKLCHPalette = () => {
         setThemeShadeSourceMap(sourceMap);
       }
     },
-    [analyzeSemanticFile, alphasToString, stops]
+    [handleAnalyzeSemanticFile, stops]
   );
 
   const handleDarkFileUpload = useCallback(
     (jsonStr) => {
       setFigmaDarkFile(jsonStr);
-      const analysis = analyzeSemanticFile(jsonStr);
+      const analysis = handleAnalyzeSemanticFile(jsonStr);
       setParsedDarkFile(analysis);
     },
-    [analyzeSemanticFile]
+    [handleAnalyzeSemanticFile]
   );
 
   // Toggle export section
