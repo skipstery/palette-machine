@@ -24,7 +24,7 @@ import {
   RefreshCw,
 } from "lucide-react";
 
-// ✅ Refactored: Imported from extracted modules
+// ✅ Refactored: Imported constants and configuration
 import {
   DEFAULT_STOPS,
   DEFAULT_HUES,
@@ -35,11 +35,29 @@ import {
   DEFAULT_ALPHA_CONFIG,
 } from "./config/constants";
 
+// ✅ Refactored: Imported UI components
 import {
   InfoBlock,
   ConfigSection,
   FormattedDescription,
 } from "./components/UI";
+
+// ✅ Refactored: Imported helper utilities
+import {
+  parseAlphaString,
+  alphasToString,
+  copyToClipboard as copyToClipboardUtil,
+  downloadFile as downloadFileUtil,
+  countTokens,
+} from "./utils/helpers";
+
+// ✅ Refactored: Imported file analysis utilities
+import {
+  analyzePaletteFile,
+  analyzeSemanticFile,
+  createHueMapping,
+  createShadeSourceMap,
+} from "./utils/fileAnalysis";
 
 const OKLCHPalette = () => {
   const [copiedIndex, setCopiedIndex] = useState(null);
