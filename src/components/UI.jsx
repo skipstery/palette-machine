@@ -1,5 +1,5 @@
 import React from "react";
-import { ChevronDown, ChevronUp } from "lucide-react";
+import { ChevronDown, ChevronUp, Check } from "lucide-react";
 
 export const InfoBlock = ({ title, isOpen, onToggle, children, variant = "info" }) => {
   const bgColors = {
@@ -137,5 +137,69 @@ export const ConfigSection = ({
         {children}
       </div>
     )}
+  </div>
+);
+
+// Collapsible section header with toggle
+export const SectionHeader = ({ title, isOpen, onToggle, textColor }) => (
+  <button
+    onClick={onToggle}
+    className="flex items-center justify-between w-full py-2 text-left"
+    style={{ color: textColor }}
+  >
+    <span className="text-xs font-semibold uppercase tracking-wide">
+      {title}
+    </span>
+    {isOpen ? (
+      <ChevronUp className="w-4 h-4" />
+    ) : (
+      <ChevronDown className="w-4 h-4" />
+    )}
+  </button>
+);
+
+// Tooltip component with no delay
+export const Tooltip = ({ children, content, isDark }) => (
+  <div className="group relative inline-flex w-full">
+    {children}
+    <div
+      className="pointer-events-none absolute top-full left-1/2 -translate-x-1/2 mt-1 px-2 py-1 text-xs rounded opacity-0 group-hover:opacity-100 transition-opacity duration-75 whitespace-nowrap z-50"
+      style={{
+        backgroundColor: isDark ? "#525252" : "#262626",
+        color: "#fff",
+      }}
+    >
+      {content}
+    </div>
+  </div>
+);
+
+// Copyable attribute with feedback
+export const CopyableAttr = ({ value, id, title, copiedIndex, onCopy, textMuted, swatchSize }) => (
+  <Tooltip content={title || value}>
+    <button
+      onClick={() => onCopy(value, id)}
+      className="font-mono h-4 flex items-center justify-center gap-0.5 px-0.5"
+      style={{ color: textMuted, minWidth: swatchSize, fontSize: 10 }}
+    >
+      <span className="truncate">{value}</span>
+      {copiedIndex === id && <Check className="w-3 h-3 flex-shrink-0" />}
+    </button>
+  </Tooltip>
+);
+
+// Simple label for contrast values - no copy, no tooltip
+export const ContrastLabel = ({ value, passes, textColor, textMuted, swatchSize }) => (
+  <div
+    className="font-mono h-4 flex items-center justify-center gap-0.5 px-0.5"
+    style={{
+      color: passes ? textColor : textMuted,
+      fontWeight: passes ? 600 : 400,
+      minWidth: swatchSize,
+      fontSize: 10,
+    }}
+  >
+    <span>{value}</span>
+    {passes && <span style={{ fontSize: 9 }}>✓</span>}
   </div>
 );
