@@ -1,3 +1,8 @@
+/**
+ * Parse alpha string like "0-30,35,40" into array of numbers [0,1,2,...,30,35,40]
+ * @param {string} str - Alpha string with ranges and individual values
+ * @returns {number[]} Sorted unique array of alpha values
+ */
 export const parseAlphaString = (str) => {
   if (!str || typeof str !== "string") return [];
   const parts = str.split(",").map((p) => p.trim());
@@ -13,6 +18,11 @@ export const parseAlphaString = (str) => {
   return [...new Set(result)].sort((a, b) => a - b);
 };
 
+/**
+ * Convert array of alpha values back to compact string format
+ * @param {number[]} alphas - Array of alpha values
+ * @returns {string} Compact string like "0-30,35,40"
+ */
 export const alphasToString = (alphas) => {
   if (!alphas || !alphas.length) return "";
   const sorted = [...alphas].sort((a, b) => a - b);
@@ -43,54 +53,4 @@ export const alphasToString = (alphas) => {
   }
 
   return ranges.join(",");
-};
-
-export const copyToClipboard = (text, setCopiedIndex, index) => {
-  navigator.clipboard.writeText(text);
-  setCopiedIndex(index);
-  setTimeout(() => setCopiedIndex(null), 2000);
-};
-
-export const downloadFile = (content, filename) => {
-  const blob = new Blob([content], { type: "application/json" });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(url);
-};
-
-export const countTokens = (jsonString) => {
-  try {
-    const data = JSON.parse(jsonString);
-    let count = 0;
-    const traverse = (obj) => {
-      for (const key in obj) {
-        if (obj[key] && typeof obj[key] === "object") {
-          if (obj[key].$type === "color") {
-            count++;
-          } else {
-            traverse(obj[key]);
-          }
-        }
-      }
-    };
-    if (data.collections) {
-      data.collections.forEach((col) => {
-        if (col.modes) {
-          col.modes.forEach((mode) => {
-            if (mode.variables) {
-              mode.variables.forEach(() => count++);
-            }
-          });
-        }
-      });
-    } else {
-      traverse(data);
-    }
-    return count;
-  } catch {
-    return 0;
-  }
 };
