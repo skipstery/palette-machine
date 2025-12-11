@@ -59,6 +59,9 @@ import {
   createShadeSourceMap,
 } from "./utils/fileAnalysis";
 
+// ✅ Refactored: Imported export generators
+import { generateExport } from "./lib/exportGenerators";
+
 const OKLCHPalette = () => {
   const [copiedIndex, setCopiedIndex] = useState(null);
   const [exportFormat, setExportFormat] = useState("json-srgb");
@@ -1143,88 +1146,9 @@ const OKLCHPalette = () => {
   };
 
   // Export generators
-  const generateExport = useCallback(() => {
-    const isP3 = exportFormat.includes("p3"),
-      isOklch = exportFormat.includes("oklch");
-    const getVal = (c) => (isOklch ? c.oklch : isP3 ? c.hexP3 : c.hex);
-
-    if (exportFormat.startsWith("json")) {
-      return JSON.stringify(
-        {
-          name: "SirvUI Palette",
-          hues: palette.map((p) => ({
-            name: p.name,
-            hue: p.H,
-            colors: p.colors.map((c) => getVal(c)),
-          })),
-          tones: stops.map((s) => s.name),
-          tokens: Object.fromEntries(
-            Object.entries(tokens).map(([k, v]) => [
-              k,
-              palette.find((p) => p.name === v)?.colors.map((c) => getVal(c)) ||
-                [],
-            ])
-          ),
-        },
-        null,
-        2
-      );
-    }
-
-    if (exportFormat === "css") {
-      let css = ":root {\n";
-      palette.forEach((hue) => {
-        hue.colors.forEach((c) => {
-          css += `  --color-${hue.name}-${c.stop}: ${c.hex};\n`;
-        });
-      });
-      css += "\n  /* Semantic tokens */\n";
-      Object.entries(tokens).forEach(([token, hueName]) => {
-        const hue = palette.find((p) => p.name === hueName);
-        if (hue)
-          hue.colors.forEach((c) => {
-            css += `  --${token}-${c.stop}: var(--color-${hueName}-${c.stop});\n`;
-          });
-      });
-      css += "}\n";
-      return css;
-    }
-
-    if (exportFormat === "tailwind") {
-      const colors = {};
-      palette.forEach((hue) => {
-        colors[hue.name] = {};
-        hue.colors.forEach((c) => {
-          colors[hue.name][c.stop] = c.hex;
-        });
-      });
-      return `module.exports = {\n  theme: {\n    extend: {\n      colors: ${JSON.stringify(
-        colors,
-        null,
-        8
-      ).replace(/"/g, "'")}\n    }\n  }\n}`;
-    }
-
-    if (exportFormat === "scss") {
-      let scss = "// Color palette\n";
-      palette.forEach((hue) => {
-        hue.colors.forEach((c) => {
-          scss += `$${hue.name}-${c.stop}: ${c.hex};\n`;
-        });
-        scss += "\n";
-      });
-      scss += "// Semantic tokens\n";
-      Object.entries(tokens).forEach(([token, hueName]) => {
-        const hue = palette.find((p) => p.name === hueName);
-        if (hue)
-          hue.colors.forEach((c) => {
-            scss += `$${token}-${c.stop}: $${hueName}-${c.stop};\n`;
-          });
-      });
-      return scss;
-    }
-
-    return "";
+  // ✅ Refactored: Use extracted generateExport from lib/exportGenerators
+  const handleGenerateExport = useCallback(() => {
+    return generateExport(palette, stops, tokens, exportFormat);
   }, [palette, stops, tokens, exportFormat]);
 
   // Figma export generation
@@ -3836,7 +3760,7 @@ const OKLCHPalette = () => {
                       </select>
                       <button
                         onClick={() =>
-                          copyToClipboard(generateExport(), "export")
+                          copyToClipboard(handleGenerateExport(), "export")
                         }
                         className="px-3 py-1 bg-blue-600 text-white rounded text-sm hover:bg-blue-700 flex items-center gap-1"
                       >
@@ -3856,7 +3780,7 @@ const OKLCHPalette = () => {
                       color: textColor,
                     }}
                   >
-                    {generateExport()}
+                    {handleGenerateExport()}
                   </pre>
                 </div>
               </div>
