@@ -130,7 +130,7 @@ export function JsonTab() {
               </div>
             </div>
             {jsonError && (
-              <div className="mb-2 p-2 rounded text-sm bg-red-500 bg-opacity-20 text-red-400">
+              <div className="mb-2 p-2 rounded text-sm bg-red-500/20 text-red-400">
                 {jsonError}
               </div>
             )}

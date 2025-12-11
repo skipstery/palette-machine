@@ -95,7 +95,7 @@ function AppContent() {
                 <button
                   onClick={handleUndo}
                   disabled={!canUndo}
-                  className="p-1.5 rounded hover:bg-gray-500 hover:bg-opacity-20 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-1.5 rounded hover:bg-gray-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Undo2 className="w-4 h-4" style={{ color: textMuted }} />
                 </button>
@@ -104,7 +104,7 @@ function AppContent() {
                 <button
                   onClick={handleRedo}
                   disabled={!canRedo}
-                  className="p-1.5 rounded hover:bg-gray-500 hover:bg-opacity-20 disabled:opacity-30 disabled:cursor-not-allowed"
+                  className="p-1.5 rounded hover:bg-gray-500/20 disabled:opacity-30 disabled:cursor-not-allowed"
                 >
                   <Redo2 className="w-4 h-4" style={{ color: textMuted }} />
                 </button>
@@ -114,7 +114,7 @@ function AppContent() {
             <Tooltip content="Reset to defaults" isDark={isDark}>
               <button
                 onClick={resetToDefaults}
-                className="p-1.5 rounded hover:bg-gray-500 hover:bg-opacity-20"
+                className="p-1.5 rounded hover:bg-gray-500/20"
               >
                 <RotateCcw className="w-4 h-4" style={{ color: textMuted }} />
               </button>
@@ -151,8 +151,8 @@ function AppContent() {
             >
               <button
                 onClick={() => setGrayscalePreview(!grayscalePreview)}
-                className={`p-1.5 rounded hover:bg-gray-500 hover:bg-opacity-20 ${
-                  grayscalePreview ? 'bg-gray-500 bg-opacity-20' : ''
+                className={`p-1.5 rounded hover:bg-gray-500/20 ${
+                  grayscalePreview ? 'bg-gray-500/20' : ''
                 }`}
               >
                 <Eye
@@ -169,7 +169,7 @@ function AppContent() {
             >
               <button
                 onClick={() => theme.setMode(isDark ? 'light' : 'dark')}
-                className="p-1.5 rounded hover:bg-gray-500 hover:bg-opacity-20"
+                className="p-1.5 rounded hover:bg-gray-500/20"
               >
                 {isDark ? (
                   <Sun className="w-4 h-4" style={{ color: textMuted }} />

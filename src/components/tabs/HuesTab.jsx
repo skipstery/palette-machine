@@ -82,7 +82,7 @@ export function HuesTab() {
                 </Tooltip>
                 <button
                   onClick={() => setHues(hues.filter((_, idx) => idx !== i))}
-                  className="p-1 text-red-500 hover:bg-red-500 hover:bg-opacity-10 rounded"
+                  className="p-1 text-red-500 hover:bg-red-500/10 rounded"
                   disabled={hues.length === 1}
                 >
                   <Trash2 className="w-4 h-4" />

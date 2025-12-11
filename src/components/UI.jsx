@@ -3,9 +3,9 @@ import { ChevronDown, ChevronUp, Check } from "lucide-react";
 
 export const InfoBlock = ({ title, isOpen, onToggle, children, variant = "info" }) => {
   const bgColors = {
-    info: "bg-blue-500 bg-opacity-10 border-blue-500 border-opacity-30",
-    warning: "bg-amber-500 bg-opacity-10 border-amber-500 border-opacity-30",
-    success: "bg-green-500 bg-opacity-10 border-green-500 border-opacity-30",
+    info: "bg-blue-500/10 border-blue-500/30",
+    warning: "bg-amber-500/10 border-amber-500/30",
+    success: "bg-green-500/10 border-green-500/30",
   };
 
   return (
@@ -112,7 +112,7 @@ export const ConfigSection = ({
       <div className="flex items-center gap-3">
         <span className="font-medium text-sm">{title}</span>
         {badge && (
-          <span className="text-xs px-2 py-0.5 rounded bg-blue-500 bg-opacity-20 text-blue-400">
+          <span className="text-xs px-2 py-0.5 rounded bg-blue-500/20 text-blue-400">
             {badge}
           </span>
         )}
