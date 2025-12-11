@@ -57,16 +57,12 @@ import {
   generateFigmaSemanticTokens as generateFigmaSemanticTokensUtil,
 } from "./lib/figmaExport";
 
+// ✅ Refactored: Imported palette generation utility
+import { generatePalette } from "./utils/paletteGenerator";
+
 // ✅ Refactored: Imported color conversion utilities
 import {
-  oklchToLinearRgb,
-  oklchToP3,
-  linearToGamma,
-  isInGamut,
-  clamp,
-  rgbToHex,
   hexToRgb,
-  cssColorToHex,
   hexToGrayscale,
 } from "./utils/colorConversions";
 
@@ -620,44 +616,8 @@ const OKLCHPalette = () => {
     return formatContrastUtil(val, contrastAlgo);
   };
 
-  const palette = useMemo(() => {
-    return hues.map((hue) => ({
-      name: hue.name,
-      H: hue.H,
-      colors: stops.map((stop) => {
-        const effectiveC = hue.fullGray ? 0 : stop.C;
-        const [rLin, gLin, bLin] = oklchToLinearRgb(stop.L, effectiveC, hue.H);
-        const inSrgbGamut = isInGamut(rLin, gLin, bLin);
-        const rSrgb = linearToGamma(rLin),
-          gSrgb = linearToGamma(gLin),
-          bSrgb = linearToGamma(bLin);
-        const hex = rgbToHex(clamp(rSrgb), clamp(gSrgb), clamp(bSrgb));
-
-        // For P3, we need to check if color is in P3 gamut and convert properly
-        const [rP3Lin, gP3Lin, bP3Lin] = oklchToP3(stop.L, effectiveC, hue.H);
-        const inP3Gamut = isInGamut(rP3Lin, gP3Lin, bP3Lin);
-        const hexP3 = rgbToHex(
-          linearToGamma(clamp(rP3Lin)),
-          linearToGamma(clamp(gP3Lin)),
-          linearToGamma(clamp(bP3Lin))
-        );
-
-        return {
-          stop: stop.name,
-          L: stop.L,
-          C: effectiveC,
-          H: hue.H,
-          hex,
-          hexP3,
-          oklch: `oklch(${(stop.L / 100).toFixed(3)} ${effectiveC.toFixed(3)} ${
-            hue.H
-          })`,
-          clipped: !inSrgbGamut,
-          clippedP3: !inP3Gamut,
-        };
-      }),
-    }));
-  }, [stops, hues]);
+  // ✅ Using imported generatePalette utility
+  const palette = useMemo(() => generatePalette(hues, stops), [hues, stops]);
 
   // Statistics
   const stats = useMemo(() => {

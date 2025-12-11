@@ -42,16 +42,15 @@ export const generatePalette = (hues, stops) => {
       );
 
       return {
-        name: stop.name,
+        stop: stop.name, // Shade identifier (e.g., "500")
         L: stop.L,
         C: effectiveC,
         H: hue.H,
-        oklch: `oklch(${stop.L}% ${effectiveC} ${hue.H})`,
+        oklch: `oklch(${(stop.L / 100).toFixed(3)} ${effectiveC.toFixed(3)} ${hue.H})`,
         hex,
         hexP3,
-        inSrgbGamut,
-        inP3Gamut,
         clipped: !inSrgbGamut,
+        clippedP3: !inP3Gamut,
       };
     }),
   }));
@@ -152,7 +151,7 @@ export const findColor = (palette, hueName, shadeName) => {
   const hue = palette.find((h) => h.name === hueName);
   if (!hue) return null;
 
-  const color = hue.colors.find((c) => c.name === shadeName);
+  const color = hue.colors.find((c) => c.stop === shadeName);
   return color || null;
 };
 
@@ -193,7 +192,7 @@ const exportToJSON = (palette, colorKey) => {
   palette.forEach((hue) => {
     output[hue.name] = {};
     hue.colors.forEach((color) => {
-      output[hue.name][color.name] = color[colorKey];
+      output[hue.name][color.stop] = color[colorKey];
     });
   });
   return JSON.stringify(output, null, 2);
@@ -203,7 +202,7 @@ const exportToCSS = (palette) => {
   let css = ":root {\n";
   palette.forEach((hue) => {
     hue.colors.forEach((color) => {
-      css += `  --${hue.name}-${color.name}: ${color.hex};\n`;
+      css += `  --${hue.name}-${color.stop}: ${color.hex};\n`;
     });
   });
   css += "}";
@@ -215,7 +214,7 @@ const exportToTailwind = (palette) => {
   palette.forEach((hue) => {
     colors[hue.name] = {};
     hue.colors.forEach((color) => {
-      colors[hue.name][color.name] = color.hex;
+      colors[hue.name][color.stop] = color.hex;
     });
   });
 
@@ -233,7 +232,7 @@ const exportToSCSS = (palette) => {
   palette.forEach((hue) => {
     scss += `// ${hue.name}\n`;
     hue.colors.forEach((color) => {
-      scss += `$${hue.name}-${color.name}: ${color.hex};\n`;
+      scss += `$${hue.name}-${color.stop}: ${color.hex};\n`;
     });
     scss += "\n";
   });
