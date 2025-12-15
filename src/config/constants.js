@@ -21,7 +21,7 @@ export const DEFAULT_HUES = [
   { name: "amber", H: 70, fullGray: false },
   { name: "yellow", H: 95, fullGray: false },
   { name: "lime", H: 125, fullGray: false },
-  { name: "green", H: 150, fullGray: false },
+  { name: "green", H: 145, fullGray: false },
   { name: "emerald", H: 165, fullGray: false },
   { name: "teal", H: 180, fullGray: false },
   { name: "cyan", H: 200, fullGray: false },
