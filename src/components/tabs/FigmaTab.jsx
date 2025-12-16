@@ -337,19 +337,28 @@ export function FigmaTab() {
                     </span>
                   )}
                 </div>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => handlePaletteFileUpload(ev.target.result);
-                      reader.readAsText(file);
-                    }
+                <label
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded border text-xs cursor-pointer hover:opacity-80 transition-opacity mb-2"
+                  style={{
+                    backgroundColor: isDark ? '#2a2a2a' : '#e5e5e5',
+                    borderColor: isDark ? '#444' : '#ccc',
                   }}
-                  className="text-xs mb-2"
-                />
+                >
+                  <span>Choose file</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => handlePaletteFileUpload(ev.target.result);
+                        reader.readAsText(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
                 {figmaPaletteFile ? (
                   <div className="space-y-1">
                     <p className="text-xs text-green-500">✓ File loaded - variableIds will be preserved</p>
@@ -381,19 +390,28 @@ export function FigmaTab() {
                     </span>
                   )}
                 </div>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => handleLightFileUpload(ev.target.result);
-                      reader.readAsText(file);
-                    }
+                <label
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded border text-xs cursor-pointer hover:opacity-80 transition-opacity mb-2"
+                  style={{
+                    backgroundColor: isDark ? '#2a2a2a' : '#e5e5e5',
+                    borderColor: isDark ? '#444' : '#ccc',
                   }}
-                  className="text-xs mb-2"
-                />
+                >
+                  <span>Choose file</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => handleLightFileUpload(ev.target.result);
+                        reader.readAsText(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
                 {figmaLightFile ? (
                   <div className="space-y-1">
                     <p className="text-xs text-green-500">✓ File loaded - variableIds will be preserved</p>
@@ -429,19 +447,28 @@ export function FigmaTab() {
                     </span>
                   )}
                 </div>
-                <input
-                  type="file"
-                  accept=".json"
-                  onChange={(e) => {
-                    const file = e.target.files?.[0];
-                    if (file) {
-                      const reader = new FileReader();
-                      reader.onload = (ev) => handleDarkFileUpload(ev.target.result);
-                      reader.readAsText(file);
-                    }
+                <label
+                  className="inline-flex items-center gap-2 px-3 py-1.5 rounded border text-xs cursor-pointer hover:opacity-80 transition-opacity mb-2"
+                  style={{
+                    backgroundColor: isDark ? '#2a2a2a' : '#e5e5e5',
+                    borderColor: isDark ? '#444' : '#ccc',
                   }}
-                  className="text-xs mb-2"
-                />
+                >
+                  <span>Choose file</span>
+                  <input
+                    type="file"
+                    accept=".json"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0];
+                      if (file) {
+                        const reader = new FileReader();
+                        reader.onload = (ev) => handleDarkFileUpload(ev.target.result);
+                        reader.readAsText(file);
+                      }
+                    }}
+                    className="hidden"
+                  />
+                </label>
                 {figmaDarkFile ? (
                   <p className="text-xs text-green-500">✓ File loaded - variableIds will be preserved</p>
                 ) : (
