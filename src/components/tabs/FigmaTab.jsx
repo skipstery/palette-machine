@@ -909,23 +909,91 @@ export function FigmaTab() {
                 isOpen={exportSections.onColors}
                 onToggle={() => toggleSection('onColors')}
               >
-                <div className="space-y-4">
-                  <div className="flex items-center gap-4">
-                    <span className="text-xs" style={{ color: textMuted }}>APCA contrast threshold:</span>
+                <div className="space-y-6">
+                  <div className="flex items-center gap-6">
+                    <span className="text-xs w-36">Contrast threshold:</span>
                     <input
                       type="number"
                       value={onColorThreshold}
                       onChange={(e) => setOnColorThreshold(Number(e.target.value))}
-                      className="px-3 py-1.5 rounded border text-xs w-20"
+                      className="w-20 px-3 py-1.5 rounded border text-xs text-center"
                       style={inputStyle}
                       min={0}
                       max={100}
                     />
-                    <span className="text-xs" style={{ color: textMuted }}>Lc (recommended: 75)</span>
+                    <span className="text-xs" style={{ color: textMuted }}>% luminance threshold</span>
                   </div>
-                  <p className="text-xs" style={{ color: textMuted }}>
-                    On-colors are automatically calculated (black or white) based on APCA contrast ratio.
-                  </p>
+
+                  {/* APCA Hint */}
+                  <div
+                    className="p-3 rounded-lg text-xs"
+                    style={{ backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5' }}
+                  >
+                    <p className="mb-2"><strong>APCA Contrast Guide:</strong></p>
+                    <div className="grid grid-cols-2 gap-2" style={{ color: textMuted }}>
+                      <div>• Lc 90+ — Body text (16px regular)</div>
+                      <div>• Lc 75+ — Large text (24px+, or 18px bold)</div>
+                      <div>• Lc 60+ — Headlines (32px+)</div>
+                      <div>• Lc 45+ — Subheadings, large icons</div>
+                      <div>• Lc 30+ — Placeholders, disabled text</div>
+                      <div>• Lc 15+ — Dividers, non-text UI</div>
+                    </div>
+                    <a
+                      href="https://git.apcacontrast.com/documentation/APCA_in_a_Nutshell.html"
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="text-blue-500 hover:underline mt-2 inline-block"
+                    >
+                      Learn more about APCA →
+                    </a>
+                  </div>
+
+                  {/* On-color preview - full shade set */}
+                  <div>
+                    <h4 className="text-xs font-medium mb-3">Preview — All Shades</h4>
+                    <p className="text-xs mb-4" style={{ color: textMuted }}>
+                      Shows which foreground (black/white) will be used for each shade. Background follows the app theme.
+                    </p>
+                    <div className="space-y-4">
+                      {Object.entries(figmaIntentMap).map(([intent, hueName]) => {
+                        const hueSet = palette.find((h) => h.name === hueName);
+                        if (!hueSet) return null;
+                        const fgName = namingConfig.foregroundPosition === 'prefix'
+                          ? `${namingConfig.foregroundModifier}${intent}`
+                          : `${intent}${namingConfig.foregroundModifier}`;
+                        return (
+                          <div key={intent} className="flex items-center gap-3">
+                            <span className="text-xs w-24 font-medium">{fgName}</span>
+                            <div className="flex gap-0.5">
+                              {hueSet.colors.map((color) => {
+                                const L =
+                                  (0.2126 * parseInt(color.hex.slice(1, 3), 16)) / 255 +
+                                  (0.7152 * parseInt(color.hex.slice(3, 5), 16)) / 255 +
+                                  (0.0722 * parseInt(color.hex.slice(5, 7), 16)) / 255;
+                                const useBlack = L > onColorThreshold / 100;
+                                return (
+                                  <div
+                                    key={color.stop}
+                                    className="w-6 h-6 rounded flex items-center justify-center text-[9px] font-bold"
+                                    style={{
+                                      backgroundColor: color.hex,
+                                      color: useBlack ? '#000' : '#fff',
+                                    }}
+                                    title={`${intent}-${color.stop}: ${useBlack ? 'black' : 'white'}`}
+                                  >
+                                    {useBlack ? 'B' : 'W'}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                    <div className="flex gap-4 mt-4 text-xs" style={{ color: textMuted }}>
+                      <span>Shades: {stops.map((s) => s.name).join(', ')}</span>
+                    </div>
+                  </div>
                 </div>
               </ConfigSection>
 

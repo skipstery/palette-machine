@@ -991,22 +991,49 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
         });
       }
 
+      // Generate base on-color for this shade (on-primary-500, on-primary-0, etc.)
+      const onShadeColor = getOnColor(components);
+      const onIntentObj = getOnIntentObj();
+      const onShadeTarget = shadeGroup
+        ? onIntentObj[shadeGroup]
+        : onIntentObj;
+      const existingOnIntent = getExistingOnIntent();
+
+      // Look up existing on-shade variable ID
+      const existingOnShade =
+        existingOnIntent[shadeGroup]?.[sourceShade || shade]?.["$root"] ||
+        existingOnIntent[shadeGroup]?.[sourceShade || shade] ||
+        existingOnIntent.step?.[sourceShade || shade]?.["$root"] ||
+        existingOnIntent.step?.[sourceShade || shade] ||
+        existingOnIntent[sourceShade || shade]?.["$root"] ||
+        existingOnIntent[sourceShade || shade] ||
+        null;
+
+      const onShadePath = shadeGroup
+        ? `${getOnIntentPath()}/${shadeGroup}/${shade}`
+        : `${getOnIntentPath()}/${shade}`;
+
+      // Create base on-shade color
+      onShadeTarget[shade] = {
+        $type: "color",
+        $value: {
+          colorSpace: "srgb",
+          components: onShadeColor.components,
+          alpha: 1,
+          hex: onShadeColor.hex,
+        },
+        $extensions: makeExtensions(
+          existingOnShade?.$extensions?.["com.figma.variableId"],
+          toCodeSyntax(onShadePath)
+        ),
+      };
+
       // Per-on-shade alpha variants from onSemanticShades config
       const onShadeAlphas = parseAlphaString(
         alphaConfig.onSemanticShades?.[shade] || ""
       );
       if (onShadeAlphas.length > 0) {
-        const onShadeColor = getOnColor(components);
-        const onIntentObj = getOnIntentObj();
-        const onShadeTarget = shadeGroup
-          ? onIntentObj[shadeGroup]
-          : onIntentObj;
-        const existingOnIntent = getExistingOnIntent();
-
         onShadeAlphas.forEach((alpha) => {
-          if (!onShadeTarget[shade]) {
-            onShadeTarget[shade] = {};
-          }
           // Use sourceShade for migration
           const existingOnAlpha =
             existingOnIntent[shadeGroup]?.[sourceShade || shade]?.[
@@ -1017,6 +1044,12 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
             ] ||
             existingOnIntent[sourceShade || shade]?.[alpha.toString()] ||
             null;
+
+          // Convert shade to object with $root if it has alphas
+          if (onShadeTarget[shade].$type) {
+            const baseValue = onShadeTarget[shade];
+            onShadeTarget[shade] = { $root: baseValue };
+          }
 
           const onAlphaPath = shadeGroup
             ? `${getOnIntentPath()}/${shadeGroup}/${shade}/${alpha}`
@@ -1258,21 +1291,48 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
         });
       }
 
+      // Generate base on-color for this shade (on-blue-500, on-gray-0, etc.)
+      const onHueColor = getOnColor(components);
+      const existingOnHue = getExistingOnHue();
+      const onShadeTarget = shadeGroup
+        ? isOnNested
+          ? result[onGroupName][hueName][shadeGroup]
+          : result[`${onPrefix}${hueName}`][shadeGroup]
+        : isOnNested
+        ? result[onGroupName][hueName]
+        : result[`${onPrefix}${hueName}`];
+
+      // Look up existing on-shade variable ID
+      const existingOnShade =
+        existingOnHue[shadeGroup]?.[sourceShade || shade]?.["$root"] ||
+        existingOnHue[shadeGroup]?.[sourceShade || shade] ||
+        existingOnHue[sourceShade || shade]?.["$root"] ||
+        existingOnHue[sourceShade || shade] ||
+        null;
+
+      const onShadePath = shadeGroup
+        ? `${getOnHuePath()}/${shadeGroup}/${shade}`
+        : `${getOnHuePath()}/${shade}`;
+
+      // Create base on-shade color
+      onShadeTarget[shade] = {
+        $type: "color",
+        $value: {
+          colorSpace: "srgb",
+          components: onHueColor.components,
+          alpha: 1,
+          hex: onHueColor.hex,
+        },
+        $extensions: makeExtensions(
+          existingOnShade?.$extensions?.["com.figma.variableId"],
+          toCodeSyntax(onShadePath)
+        ),
+      };
+
       // Per-shade on-hue alpha variants from onPrimitiveShades config
       const onShadeAlphaConfig = alphaConfig.onPrimitiveShades?.[shade];
       if (onShadeAlphaConfig) {
         const onShadeAlphas = parseAlphaString(onShadeAlphaConfig);
-        const existingOnHue = getExistingOnHue();
-        const onShadeTarget = shadeGroup
-          ? isOnNested
-            ? result[onGroupName][hueName][shadeGroup]
-            : result[`${onPrefix}${hueName}`][shadeGroup]
-          : isOnNested
-          ? result[onGroupName][hueName]
-          : result[`${onPrefix}${hueName}`];
-
-        // Calculate on-color for this shade
-        const onHueColor = getOnColor(components);
 
         onShadeAlphas.forEach((alpha) => {
           const existingOnAlpha =
@@ -1282,10 +1342,8 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
             existingOnHue[sourceShade || shade]?.[alpha.toString()] ||
             null;
 
-          // Initialize shade entry if needed
-          if (!onShadeTarget[shade]) {
-            onShadeTarget[shade] = {};
-          } else if (onShadeTarget[shade].$type) {
+          // Convert shade to object with $root if it has alphas
+          if (onShadeTarget[shade].$type) {
             const baseValue = onShadeTarget[shade];
             onShadeTarget[shade] = { $root: baseValue };
           }
