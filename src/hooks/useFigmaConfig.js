@@ -90,6 +90,13 @@ export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
     dark: { ground: 'primitive', ground1: 'primitive', ground2: 'primitive' },
   });
 
+  // On-ground color configuration (manual selection instead of auto black/white)
+  // refType: 'auto' (calculated from ground), 'black', 'white', 'custom'
+  const [onGroundColor, setOnGroundColor] = useState({
+    light: { refType: 'auto', custom: null },
+    dark: { refType: 'auto', custom: null },
+  });
+
   // Stark shades
   const [starkShades, setStarkShades] = useState({
     light: {
@@ -283,6 +290,7 @@ export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
           namingConfig,
           groundCustomColors,
           groundRefType,
+          onGroundColor,
           onColorThreshold,
           themeShadeSourceMap,
           starkShades,
@@ -304,6 +312,7 @@ export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
       namingConfig,
       groundCustomColors,
       groundRefType,
+      onGroundColor,
       onColorThreshold,
       themeShadeSourceMap,
       starkShades,
@@ -423,6 +432,10 @@ export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
     setGroundCustomColors,
     groundRefType,
     setGroundRefType,
+
+    // On-ground color
+    onGroundColor,
+    setOnGroundColor,
 
     // Stark
     starkShades,

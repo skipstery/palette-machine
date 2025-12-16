@@ -184,6 +184,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
     namingConfig,
     groundCustomColors,
     groundRefType,
+    onGroundColor,
     onColorThreshold,
     themeShadeSourceMap,
     starkShades,
@@ -495,7 +496,42 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
 
   const groundName = namingConfig.elevation0;
   const groundColor = getGroundColor("ground");
-  const onGroundColor = getOnColor(groundColor.components);
+
+  // Get on-ground color based on configuration (auto, black, white, or custom)
+  const modeOnGroundConfig = isLight ? onGroundColor?.light : onGroundColor?.dark;
+  const getOnGroundColorValue = () => {
+    const refType = modeOnGroundConfig?.refType || 'auto';
+    if (refType === 'black') {
+      return { hex: '#000000', components: [0, 0, 0] };
+    }
+    if (refType === 'white') {
+      return { hex: '#FFFFFF', components: [1, 1, 1] };
+    }
+    if (refType === 'custom' && modeOnGroundConfig?.custom) {
+      // Parse OKLCH custom value
+      const match = modeOnGroundConfig.custom.match(
+        /oklch\(\s*([\d.]+)%?\s+([\d.]+)\s+([\d.]+)\s*\)/i
+      );
+      if (match) {
+        const L = parseFloat(match[1]) / 100;
+        // Simplified: use L for grayscale approximation
+        const val = Math.round(L * 255);
+        const hex = `#${val.toString(16).padStart(2, '0').repeat(3)}`.toUpperCase();
+        return { hex, components: [L, L, L] };
+      }
+      // Try parsing as hex
+      if (modeOnGroundConfig.custom.startsWith('#')) {
+        const hex = modeOnGroundConfig.custom;
+        const r = parseInt(hex.slice(1, 3), 16) / 255;
+        const g = parseInt(hex.slice(3, 5), 16) / 255;
+        const b = parseInt(hex.slice(5, 7), 16) / 255;
+        return { hex: hex.toUpperCase(), components: [r, g, b] };
+      }
+    }
+    // Default: auto - calculate from ground color
+    return getOnColor(groundColor.components);
+  };
+  const onGroundColorValue = getOnGroundColorValue();
 
   // Set up on-ground in correct structure
   if (isOnNested) {
@@ -526,9 +562,9 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
       $type: "color",
       $value: {
         colorSpace: "srgb",
-        components: onGroundColor.components,
+        components: onGroundColorValue.components,
         alpha: alpha / 100,
-        hex: onGroundColor.hex,
+        hex: onGroundColorValue.hex,
       },
       $extensions: makeExtensions(
         existingVarId,

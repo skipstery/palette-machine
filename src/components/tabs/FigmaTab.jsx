@@ -45,6 +45,8 @@ export function FigmaTab() {
     setGroundCustomColors,
     groundRefType,
     setGroundRefType,
+    onGroundColor,
+    setOnGroundColor,
     starkShades,
     setStarkShades,
     starkDefaultShade,
@@ -946,6 +948,65 @@ export function FigmaTab() {
                     >
                       Learn more about APCA →
                     </a>
+                  </div>
+
+                  {/* On-Ground Color Selection */}
+                  <div>
+                    <h4 className="text-xs font-medium mb-3">On-Ground Color</h4>
+                    <p className="text-xs mb-4" style={{ color: textMuted }}>
+                      Select the foreground color for ground surfaces. Unlike other on-colors (auto black/white), on-ground can be manually configured.
+                    </p>
+                    <div className="grid grid-cols-2 gap-6">
+                      {['light', 'dark'].map((mode) => (
+                        <div key={mode}>
+                          <h5 className="text-xs font-medium mb-3 capitalize">{mode} Mode</h5>
+                          <div className="space-y-3">
+                            <div className="flex items-center gap-3">
+                              <select
+                                value={onGroundColor[mode].refType}
+                                onChange={(e) => setOnGroundColor((prev) => ({
+                                  ...prev,
+                                  [mode]: { ...prev[mode], refType: e.target.value }
+                                }))}
+                                className="px-3 py-1.5 rounded border text-xs flex-1"
+                                style={inputStyle}
+                              >
+                                <option value="auto">Auto (from ground)</option>
+                                <option value="black">Black (#000000)</option>
+                                <option value="white">White (#FFFFFF)</option>
+                                <option value="custom">Custom OKLCH</option>
+                              </select>
+                            </div>
+                            {onGroundColor[mode].refType === 'custom' && (
+                              <input
+                                type="text"
+                                value={onGroundColor[mode].custom || ''}
+                                onChange={(e) => setOnGroundColor((prev) => ({
+                                  ...prev,
+                                  [mode]: { ...prev[mode], custom: e.target.value }
+                                }))}
+                                placeholder="oklch(50% 0.1 250)"
+                                className="px-3 py-1.5 rounded border text-xs w-full font-mono"
+                                style={inputStyle}
+                              />
+                            )}
+                            <div
+                              className="h-8 rounded flex items-center justify-center text-xs font-medium"
+                              style={{
+                                backgroundColor: mode === 'light' ? '#fafafa' : '#1a1a1a',
+                                color: onGroundColor[mode].refType === 'black' ? '#000000'
+                                  : onGroundColor[mode].refType === 'white' ? '#FFFFFF'
+                                  : onGroundColor[mode].refType === 'custom' ? (onGroundColor[mode].custom || '#888')
+                                  : (mode === 'light' ? '#000000' : '#FFFFFF'),
+                                border: `1px solid ${borderColor}`,
+                              }}
+                            >
+                              on-ground preview
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
                   </div>
 
                   {/* On-color preview - full shade set */}
