@@ -91,10 +91,10 @@ export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
   });
 
   // On-ground color configuration (manual selection instead of auto black/white)
-  // refType: 'auto' (calculated from ground), 'black', 'white', 'custom'
+  // refType: 'primitive' (palette reference), 'auto', 'black', 'white', 'custom'
   const [onGroundColor, setOnGroundColor] = useState({
-    light: { refType: 'auto', custom: null },
-    dark: { refType: 'auto', custom: null },
+    light: { refType: 'primitive', hue: 'gray', shade: '1000' },
+    dark: { refType: 'primitive', hue: 'gray', shade: '0' },
   });
 
   // Stark shades

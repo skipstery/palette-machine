@@ -497,10 +497,28 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
   const groundName = namingConfig.elevation0;
   const groundColor = getGroundColor("ground");
 
-  // Get on-ground color based on configuration (auto, black, white, or custom)
+  // Get on-ground color based on configuration (primitive, auto, black, white, or custom)
   const modeOnGroundConfig = isLight ? onGroundColor?.light : onGroundColor?.dark;
   const getOnGroundColorValue = () => {
-    const refType = modeOnGroundConfig?.refType || 'auto';
+    const refType = modeOnGroundConfig?.refType || 'primitive';
+    if (refType === 'primitive') {
+      // Reference a palette primitive color (e.g., --gray-1000)
+      const hueName = modeOnGroundConfig?.hue || 'gray';
+      const shadeName = modeOnGroundConfig?.shade || (isLight ? '1000' : '0');
+      const hueSet = palette.find(h => h.name === hueName);
+      const color = hueSet?.colors.find(c => c.stop === shadeName);
+      if (color) {
+        const hexValue = useP3 ? color.hexP3 : color.hex;
+        return {
+          hex: hexValue,
+          components: hexToComponents(hexValue),
+          // Store reference info for alias generation
+          isReference: true,
+          refHue: hueName,
+          refShade: shadeName,
+        };
+      }
+    }
     if (refType === 'black') {
       return { hex: '#000000', components: [0, 0, 0] };
     }

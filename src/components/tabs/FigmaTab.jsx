@@ -957,55 +957,99 @@ export function FigmaTab() {
                       Select the foreground color for ground surfaces. Unlike other on-colors (auto black/white), on-ground can be manually configured.
                     </p>
                     <div className="grid grid-cols-2 gap-6">
-                      {['light', 'dark'].map((mode) => (
-                        <div key={mode}>
-                          <h5 className="text-xs font-medium mb-3 capitalize">{mode} Mode</h5>
-                          <div className="space-y-3">
-                            <div className="flex items-center gap-3">
-                              <select
-                                value={onGroundColor[mode].refType}
-                                onChange={(e) => setOnGroundColor((prev) => ({
-                                  ...prev,
-                                  [mode]: { ...prev[mode], refType: e.target.value }
-                                }))}
-                                className="px-3 py-1.5 rounded border text-xs flex-1"
-                                style={inputStyle}
+                      {['light', 'dark'].map((mode) => {
+                        // Get preview color
+                        const getPreviewColor = () => {
+                          const config = onGroundColor[mode];
+                          if (config.refType === 'black') return '#000000';
+                          if (config.refType === 'white') return '#FFFFFF';
+                          if (config.refType === 'custom') return config.custom || '#888888';
+                          if (config.refType === 'primitive') {
+                            const hueSet = palette.find(h => h.name === config.hue);
+                            const color = hueSet?.colors.find(c => c.stop === config.shade);
+                            return color?.hex || '#888888';
+                          }
+                          // auto
+                          return mode === 'light' ? '#000000' : '#FFFFFF';
+                        };
+                        return (
+                          <div key={mode}>
+                            <h5 className="text-xs font-medium mb-3 capitalize">{mode} Mode</h5>
+                            <div className="space-y-3">
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={onGroundColor[mode].refType}
+                                  onChange={(e) => setOnGroundColor((prev) => ({
+                                    ...prev,
+                                    [mode]: { ...prev[mode], refType: e.target.value }
+                                  }))}
+                                  className="px-2 py-1.5 rounded border text-xs"
+                                  style={inputStyle}
+                                >
+                                  <option value="primitive">Primitive</option>
+                                  <option value="auto">Auto (from ground)</option>
+                                  <option value="black">Black</option>
+                                  <option value="white">White</option>
+                                  <option value="custom">Custom</option>
+                                </select>
+                                {onGroundColor[mode].refType === 'primitive' && (
+                                  <>
+                                    <select
+                                      value={onGroundColor[mode].hue || 'gray'}
+                                      onChange={(e) => setOnGroundColor((prev) => ({
+                                        ...prev,
+                                        [mode]: { ...prev[mode], hue: e.target.value }
+                                      }))}
+                                      className="px-2 py-1.5 rounded border text-xs"
+                                      style={inputStyle}
+                                    >
+                                      {hues.map(h => (
+                                        <option key={h.name} value={h.name}>{h.name}</option>
+                                      ))}
+                                    </select>
+                                    <select
+                                      value={onGroundColor[mode].shade || '500'}
+                                      onChange={(e) => setOnGroundColor((prev) => ({
+                                        ...prev,
+                                        [mode]: { ...prev[mode], shade: e.target.value }
+                                      }))}
+                                      className="px-2 py-1.5 rounded border text-xs"
+                                      style={inputStyle}
+                                    >
+                                      {stops.map(s => (
+                                        <option key={s.name} value={s.name}>{s.name}</option>
+                                      ))}
+                                    </select>
+                                  </>
+                                )}
+                              </div>
+                              {onGroundColor[mode].refType === 'custom' && (
+                                <input
+                                  type="text"
+                                  value={onGroundColor[mode].custom || ''}
+                                  onChange={(e) => setOnGroundColor((prev) => ({
+                                    ...prev,
+                                    [mode]: { ...prev[mode], custom: e.target.value }
+                                  }))}
+                                  placeholder="oklch(50% 0.1 250) or #hex"
+                                  className="px-3 py-1.5 rounded border text-xs w-full font-mono"
+                                  style={inputStyle}
+                                />
+                              )}
+                              <div
+                                className="h-8 rounded flex items-center justify-center text-xs font-medium"
+                                style={{
+                                  backgroundColor: mode === 'light' ? '#fafafa' : '#1a1a1a',
+                                  color: getPreviewColor(),
+                                  border: `1px solid ${borderColor}`,
+                                }}
                               >
-                                <option value="auto">Auto (from ground)</option>
-                                <option value="black">Black (#000000)</option>
-                                <option value="white">White (#FFFFFF)</option>
-                                <option value="custom">Custom OKLCH</option>
-                              </select>
-                            </div>
-                            {onGroundColor[mode].refType === 'custom' && (
-                              <input
-                                type="text"
-                                value={onGroundColor[mode].custom || ''}
-                                onChange={(e) => setOnGroundColor((prev) => ({
-                                  ...prev,
-                                  [mode]: { ...prev[mode], custom: e.target.value }
-                                }))}
-                                placeholder="oklch(50% 0.1 250)"
-                                className="px-3 py-1.5 rounded border text-xs w-full font-mono"
-                                style={inputStyle}
-                              />
-                            )}
-                            <div
-                              className="h-8 rounded flex items-center justify-center text-xs font-medium"
-                              style={{
-                                backgroundColor: mode === 'light' ? '#fafafa' : '#1a1a1a',
-                                color: onGroundColor[mode].refType === 'black' ? '#000000'
-                                  : onGroundColor[mode].refType === 'white' ? '#FFFFFF'
-                                  : onGroundColor[mode].refType === 'custom' ? (onGroundColor[mode].custom || '#888')
-                                  : (mode === 'light' ? '#000000' : '#FFFFFF'),
-                                border: `1px solid ${borderColor}`,
-                              }}
-                            >
-                              on-ground preview
+                                on-ground preview
+                              </div>
                             </div>
                           </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
 
