@@ -4,6 +4,7 @@
  */
 
 import { parseAlphaString } from "../utils/helpers";
+import { calculateAPCA } from "../utils/contrast";
 
 /**
  * Helper to convert hex to RGB components (0-1)
@@ -390,15 +391,23 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
     };
   };
 
-  // Calculate on-color (black or white) based on background luminance
-  const getOnColor = (bgComponents) => {
-    // Simple luminance calculation
-    const L =
-      0.2126 * bgComponents[0] +
-      0.7152 * bgComponents[1] +
-      0.0722 * bgComponents[2];
-    // Use threshold to determine if we need black or white text
-    const useBlack = L > onColorThreshold / 100;
+  // Calculate on-color (black or white) based on APCA contrast
+  // Uses same logic as palette tab: calculates which foreground color (black or white)
+  // provides better contrast against the background color
+  const getOnColor = (bgHex) => {
+    // Calculate APCA contrast for both black and white text on this background
+    // APCA returns positive values when text is lighter than background (white on dark)
+    // and negative values when text is darker than background (black on light)
+    const contrastWithBlack = calculateAPCA("#000000", bgHex);
+    const contrastWithWhite = calculateAPCA("#FFFFFF", bgHex);
+
+    // Use whichever color provides better contrast (higher absolute value)
+    // and meets the threshold if possible
+    const absBlack = Math.abs(contrastWithBlack);
+    const absWhite = Math.abs(contrastWithWhite);
+
+    // Prefer the color with higher contrast
+    const useBlack = absBlack >= absWhite;
     return useBlack
       ? { hex: "#000000", components: [0, 0, 0] }
       : { hex: "#FFFFFF", components: [1, 1, 1] };
@@ -495,7 +504,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
 
   const groundName = namingConfig.elevation0;
   const groundColor = getGroundColor("ground");
-  const onGroundColor = getOnColor(groundColor.components);
+  const onGroundColor = getOnColor(groundColor.hex);
 
   // Set up on-ground in correct structure
   if (isOnNested) {
@@ -850,7 +859,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
         ? reversedDefaultColor.hexP3
         : reversedDefaultColor.hex;
       const defaultComponents = hexToComponents(defaultHex);
-      const onIntentColor = getOnColor(defaultComponents);
+      const onIntentColor = getOnColor(defaultHex);
       const existingOnIntent = getExistingOnIntent();
 
       // Generate on-intent alphas (at on-intent root: on-primary/10)
@@ -996,7 +1005,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
         alphaConfig.onSemanticShades?.[shade] || ""
       );
       if (onShadeAlphas.length > 0) {
-        const onShadeColor = getOnColor(components);
+        const onShadeColor = getOnColor(hexValue);
         const onIntentObj = getOnIntentObj();
         const onShadeTarget = shadeGroup
           ? onIntentObj[shadeGroup]
@@ -1127,7 +1136,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
         ? reversedDefaultColor.hexP3
         : reversedDefaultColor.hex;
       const defaultComponents = hexToComponents(defaultHex);
-      const onHueColor = getOnColor(defaultComponents);
+      const onHueColor = getOnColor(defaultHex);
       const existingOnHue = getExistingOnHue();
 
       // Generate on-hue root alphas (at on-hue root: on-blue/10)
@@ -1272,7 +1281,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
           : result[`${onPrefix}${hueName}`];
 
         // Calculate on-color for this shade
-        const onHueColor = getOnColor(components);
+        const onHueColor = getOnColor(hexValue);
 
         onShadeAlphas.forEach((alpha) => {
           const existingOnAlpha =
