@@ -1086,13 +1086,9 @@ export function FigmaTab() {
                             <span className="text-xs w-24 font-medium">{fgName}</span>
                             <div className="flex gap-0.5">
                               {hueSet.colors.map((color) => {
-                                // Use lightness threshold to determine foreground color
+                                // Use OKLCH Lightness threshold to determine foreground color
                                 // Black text when L >= threshold, white text otherwise
-                                const r = parseInt(color.hex.slice(1, 3), 16) / 255;
-                                const g = parseInt(color.hex.slice(3, 5), 16) / 255;
-                                const b = parseInt(color.hex.slice(5, 7), 16) / 255;
-                                const L = (0.2126 * r + 0.7152 * g + 0.0722 * b) * 100;
-                                const useBlack = L >= onColorThreshold;
+                                const useBlack = color.L >= onColorThreshold;
                                 return (
                                   <div
                                     key={color.stop}
@@ -1101,7 +1097,7 @@ export function FigmaTab() {
                                       backgroundColor: color.hex,
                                       color: useBlack ? '#000' : '#fff',
                                     }}
-                                    title={`${intent}-${color.stop}: ${useBlack ? 'black' : 'white'} (L=${L.toFixed(0)}% vs ${onColorThreshold}%)`}
+                                    title={`${intent}-${color.stop}: ${useBlack ? 'black' : 'white'} (L=${color.L.toFixed(0)} vs ${onColorThreshold})`}
                                   >
                                     {useBlack ? 'B' : 'W'}
                                   </div>

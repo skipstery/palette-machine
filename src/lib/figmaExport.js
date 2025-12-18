@@ -391,21 +391,36 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
     };
   };
 
-  // Calculate on-color (black or white) based on background lightness
+  // Calculate on-color (black or white) based on OKLCH Lightness
   // Matches palette tab "Auto (by Lightness)" behavior:
   // Use black text when L >= threshold, white text when L < threshold
-  const getOnColor = (bgHex) => {
-    // Calculate relative luminance (simplified lightness)
-    const r = parseInt(bgHex.slice(1, 3), 16) / 255;
-    const g = parseInt(bgHex.slice(3, 5), 16) / 255;
-    const b = parseInt(bgHex.slice(5, 7), 16) / 255;
-    const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
-
+  // L should be OKLCH lightness (0-100)
+  const getOnColor = (oklchL) => {
     // Use black if lightness >= threshold (light backgrounds), white otherwise
-    const useBlack = L * 100 >= onColorThreshold;
+    const useBlack = oklchL >= onColorThreshold;
     return useBlack
       ? { hex: "#000000", components: [0, 0, 0] }
       : { hex: "#FFFFFF", components: [1, 1, 1] };
+  };
+
+  // Get OKLCH L value for ground color from palette
+  const getGroundColorL = (groundKey) => {
+    const modeConfig = isLight ? groundRefType.light : groundRefType.dark;
+    const refType = modeConfig[groundKey];
+    const shadeValue = groundConfig[groundKey];
+
+    // For theme reference, use neutral hue
+    if (refType === "theme") {
+      const neutralHue = figmaIntentMap.neutral || "gray";
+      const hueSet = palette.find((h) => h.name === neutralHue);
+      const color = hueSet?.colors.find((c) => c.stop === shadeValue);
+      return color?.L ?? 50;
+    }
+
+    // For primitive reference, use gray
+    const hueSet = palette.find((h) => h.name === "gray");
+    const color = hueSet?.colors.find((c) => c.stop === shadeValue);
+    return color?.L ?? 50;
   };
 
   const result = {};
@@ -549,8 +564,8 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
         return { hex: hex.toUpperCase(), components: [r, g, b] };
       }
     }
-    // Default: auto - calculate from ground color using APCA contrast
-    return getOnColor(groundColor.hex);
+    // Default: auto - calculate from ground color using lightness threshold
+    return getOnColor(getGroundColorL("ground"));
   };
   const onGroundColorValue = getOnGroundColorValue();
 
@@ -907,7 +922,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
         ? reversedDefaultColor.hexP3
         : reversedDefaultColor.hex;
       const defaultComponents = hexToComponents(defaultHex);
-      const onIntentColor = getOnColor(defaultHex);
+      const onIntentColor = getOnColor(reversedDefaultColor.L);
       const existingOnIntent = getExistingOnIntent();
 
       // Generate on-intent alphas (at on-intent root: on-primary/10)
@@ -1049,7 +1064,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
       }
 
       // Generate base on-color for this shade (on-primary-500, on-primary-0, etc.)
-      const onShadeColor = getOnColor(hexValue);
+      const onShadeColor = getOnColor(reversedColor.L);
       const onIntentObj = getOnIntentObj();
       const onShadeTarget = shadeGroup
         ? onIntentObj[shadeGroup]
@@ -1217,7 +1232,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
         ? reversedDefaultColor.hexP3
         : reversedDefaultColor.hex;
       const defaultComponents = hexToComponents(defaultHex);
-      const onHueColor = getOnColor(defaultHex);
+      const onHueColor = getOnColor(reversedDefaultColor.L);
       const existingOnHue = getExistingOnHue();
 
       // Generate on-hue root alphas (at on-hue root: on-blue/10)
@@ -1349,7 +1364,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
       }
 
       // Generate base on-color for this shade (on-blue-500, on-gray-0, etc.)
-      const onHueColor = getOnColor(hexValue);
+      const onHueColor = getOnColor(reversedColor.L);
       const existingOnHue = getExistingOnHue();
       const onShadeTarget = shadeGroup
         ? isOnNested
