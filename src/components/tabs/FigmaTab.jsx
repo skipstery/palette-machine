@@ -939,42 +939,30 @@ export function FigmaTab() {
                 onToggle={() => toggleSection('onColors')}
               >
                 <div className="space-y-6">
-                  <div className="flex items-center gap-6">
-                    <span className="text-xs w-36">Contrast threshold:</span>
+                  {/* Threshold control */}
+                  <div className="flex items-center gap-4">
+                    <span className="text-xs">Switch at L:</span>
                     <input
                       type="number"
                       value={onColorThreshold}
                       onChange={(e) => setOnColorThreshold(Number(e.target.value))}
-                      className="w-20 px-3 py-1.5 rounded border text-xs text-center"
+                      className="w-16 px-2 py-1.5 rounded border text-xs text-center"
                       style={inputStyle}
                       min={0}
                       max={100}
                     />
-                    <span className="text-xs" style={{ color: textMuted }}>% luminance threshold</span>
+                    <span className="text-xs" style={{ color: textMuted }}>% lightness threshold</span>
                   </div>
 
-                  {/* APCA Hint */}
+                  {/* Info */}
                   <div
                     className="p-3 rounded-lg text-xs"
-                    style={{ backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5' }}
+                    style={{ backgroundColor: isDark ? '#1a1a1a' : '#f5f5f5', color: textMuted }}
                   >
-                    <p className="mb-2"><strong>APCA Contrast Guide:</strong></p>
-                    <div className="grid grid-cols-2 gap-2" style={{ color: textMuted }}>
-                      <div>• Lc 90+ — Body text (16px regular)</div>
-                      <div>• Lc 75+ — Large text (24px+, or 18px bold)</div>
-                      <div>• Lc 60+ — Headlines (32px+)</div>
-                      <div>• Lc 45+ — Subheadings, large icons</div>
-                      <div>• Lc 30+ — Placeholders, disabled text</div>
-                      <div>• Lc 15+ — Dividers, non-text UI</div>
-                    </div>
-                    <a
-                      href="https://git.apcacontrast.com/documentation/APCA_in_a_Nutshell.html"
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="text-blue-500 hover:underline mt-2 inline-block"
-                    >
-                      Learn more about APCA →
-                    </a>
+                    <p>
+                      On-colors are determined by shade lightness. When background lightness
+                      is ≥ {onColorThreshold}%, black text is used. Below that, white text is used.
+                    </p>
                   </div>
 
                   {/* On-Ground Color Selection */}
@@ -1098,11 +1086,13 @@ export function FigmaTab() {
                             <span className="text-xs w-24 font-medium">{fgName}</span>
                             <div className="flex gap-0.5">
                               {hueSet.colors.map((color) => {
-                                const L =
-                                  (0.2126 * parseInt(color.hex.slice(1, 3), 16)) / 255 +
-                                  (0.7152 * parseInt(color.hex.slice(3, 5), 16)) / 255 +
-                                  (0.0722 * parseInt(color.hex.slice(5, 7), 16)) / 255;
-                                const useBlack = L > onColorThreshold / 100;
+                                // Use lightness threshold to determine foreground color
+                                // Black text when L >= threshold, white text otherwise
+                                const r = parseInt(color.hex.slice(1, 3), 16) / 255;
+                                const g = parseInt(color.hex.slice(3, 5), 16) / 255;
+                                const b = parseInt(color.hex.slice(5, 7), 16) / 255;
+                                const L = (0.2126 * r + 0.7152 * g + 0.0722 * b) * 100;
+                                const useBlack = L >= onColorThreshold;
                                 return (
                                   <div
                                     key={color.stop}
@@ -1111,7 +1101,7 @@ export function FigmaTab() {
                                       backgroundColor: color.hex,
                                       color: useBlack ? '#000' : '#fff',
                                     }}
-                                    title={`${intent}-${color.stop}: ${useBlack ? 'black' : 'white'}`}
+                                    title={`${intent}-${color.stop}: ${useBlack ? 'black' : 'white'} (L=${L.toFixed(0)}% vs ${onColorThreshold}%)`}
                                   >
                                     {useBlack ? 'B' : 'W'}
                                   </div>

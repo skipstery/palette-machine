@@ -4,7 +4,6 @@
  */
 
 import { parseAlphaString } from "../utils/helpers";
-import { calculateAPCA } from "../utils/contrast";
 
 /**
  * Helper to convert hex to RGB components (0-1)
@@ -392,23 +391,18 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
     };
   };
 
-  // Calculate on-color (black or white) based on APCA contrast
-  // Uses same logic as palette tab: calculates which foreground color (black or white)
-  // provides better contrast against the background color
+  // Calculate on-color (black or white) based on background lightness
+  // Matches palette tab "Auto (by Lightness)" behavior:
+  // Use black text when L >= threshold, white text when L < threshold
   const getOnColor = (bgHex) => {
-    // Calculate APCA contrast for both black and white text on this background
-    // APCA returns positive values when text is lighter than background (white on dark)
-    // and negative values when text is darker than background (black on light)
-    const contrastWithBlack = calculateAPCA("#000000", bgHex);
-    const contrastWithWhite = calculateAPCA("#FFFFFF", bgHex);
+    // Calculate relative luminance (simplified lightness)
+    const r = parseInt(bgHex.slice(1, 3), 16) / 255;
+    const g = parseInt(bgHex.slice(3, 5), 16) / 255;
+    const b = parseInt(bgHex.slice(5, 7), 16) / 255;
+    const L = 0.2126 * r + 0.7152 * g + 0.0722 * b;
 
-    // Use whichever color provides better contrast (higher absolute value)
-    // and meets the threshold if possible
-    const absBlack = Math.abs(contrastWithBlack);
-    const absWhite = Math.abs(contrastWithWhite);
-
-    // Prefer the color with higher contrast
-    const useBlack = absBlack >= absWhite;
+    // Use black if lightness >= threshold (light backgrounds), white otherwise
+    const useBlack = L * 100 >= onColorThreshold;
     return useBlack
       ? { hex: "#000000", components: [0, 0, 0] }
       : { hex: "#FFFFFF", components: [1, 1, 1] };
