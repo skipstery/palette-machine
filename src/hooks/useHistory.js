@@ -47,6 +47,13 @@ export const useHistory = (initialState, debounceMs = 300) => {
     if (!initialState) return;
 
     const snapshot = getStateSnapshot(initialState);
+
+    // Record the starting point right away so the first edit can be undone
+    if (historyIndexRef.current === -1) {
+      pushToHistory(snapshot);
+      return;
+    }
+
     const timer = setTimeout(() => pushToHistory(snapshot), debounceMs);
     return () => clearTimeout(timer);
   }, [initialState, debounceMs, getStateSnapshot, pushToHistory]);
@@ -97,6 +104,13 @@ export const useHistory = (initialState, debounceMs = 300) => {
   };
 };
 
+// Text fields keep their native undo (e.g. the JSON editor)
+const isTextField = (el) =>
+  el?.isContentEditable ||
+  el?.tagName === "TEXTAREA" ||
+  (el?.tagName === "INPUT" &&
+    ["text", "search", "url", "email", "password"].includes(el.type));
+
 /**
  * Setup keyboard shortcuts for undo/redo
  * @param {Function} onUndo - Callback for undo action
@@ -105,16 +119,16 @@ export const useHistory = (initialState, debounceMs = 300) => {
 export const useHistoryKeyboard = (onUndo, onRedo) => {
   useEffect(() => {
     const handleKeyDown = (e) => {
+      if (!(e.metaKey || e.ctrlKey) || isTextField(e.target)) return;
+      const key = e.key.toLowerCase(); // Shift turns "z" into "Z"
+
       // Cmd+Z or Ctrl+Z for undo
-      if ((e.metaKey || e.ctrlKey) && e.key === "z" && !e.shiftKey) {
+      if (key === "z" && !e.shiftKey) {
         e.preventDefault();
         onUndo?.();
       }
       // Cmd+Shift+Z or Ctrl+Y for redo
-      if (
-        ((e.metaKey || e.ctrlKey) && e.key === "z" && e.shiftKey) ||
-        (e.ctrlKey && e.key === "y")
-      ) {
+      if ((key === "z" && e.shiftKey) || (e.ctrlKey && key === "y")) {
         e.preventDefault();
         onRedo?.();
       }

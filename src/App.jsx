@@ -11,6 +11,7 @@ import {
 
 import { PaletteProvider, usePalette } from './context/PaletteContext';
 import { Tooltip } from './components/UI';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Tab components
 import PaletteTab from './components/tabs/PaletteTab';
@@ -53,23 +54,6 @@ function AppContent() {
       className="min-h-screen"
       style={{ backgroundColor: currentBg, color: textColor }}
     >
-      <style>{`
-        [title] { position: relative; }
-        .tooltip-instant:hover::after {
-          content: attr(data-tip);
-          position: absolute;
-          bottom: 100%;
-          left: 50%;
-          transform: translateX(-50%);
-          padding: 4px 8px;
-          background: ${isDark ? '#525252' : '#262626'};
-          color: white;
-          font-size: 11px;
-          border-radius: 4px;
-          white-space: nowrap;
-          z-index: 100;
-        }
-      `}</style>
       <div className="flex flex-col h-screen">
         {/* Header */}
         <div
@@ -135,7 +119,7 @@ function AppContent() {
                 style={{ color: textMuted }}
               >
                 <option value="native">
-                  Native ({nativeColorSpace.toUpperCase()})
+                  Native ({nativeColorSpace === 'p3' ? 'P3' : 'sRGB'})
                 </option>
                 <option value="srgb">Force sRGB</option>
                 {nativeColorSpace === 'p3' && (
@@ -206,11 +190,13 @@ function AppContent() {
         </div>
 
         {/* Tab Content */}
-        {activeTab === 'palette' && <PaletteTab />}
-        {activeTab === 'shades' && <ShadesTab />}
-        {activeTab === 'hues' && <HuesTab />}
-        {activeTab === 'json' && <JsonTab />}
-        {activeTab === 'figma' && <FigmaTab />}
+        <ErrorBoundary resetKey={activeTab}>
+          {activeTab === 'palette' && <PaletteTab />}
+          {activeTab === 'shades' && <ShadesTab />}
+          {activeTab === 'hues' && <HuesTab />}
+          {activeTab === 'json' && <JsonTab />}
+          {activeTab === 'figma' && <FigmaTab />}
+        </ErrorBoundary>
       </div>
     </div>
   );

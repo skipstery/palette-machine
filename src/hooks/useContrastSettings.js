@@ -10,7 +10,8 @@ import {
 export function useContrastSettings() {
   const [contrastAlgo, setContrastAlgo] = useState('APCA');
   const [contrastDirection, setContrastDirection] = useState('text-on-bg');
-  const [contrastThreshold, setContrastThreshold] = useState(75);
+  const [contrastThreshold, setContrastThreshold] = useState(75); // APCA Lc
+  const [wcagThreshold, setWcagThreshold] = useState(4.5); // WCAG ratio
 
   // Contrast comparison targets
   const [showVsWhite, setShowVsWhite] = useState(false);
@@ -31,16 +32,18 @@ export function useContrastSettings() {
     return formatContrastUtil(val, contrastAlgo);
   }, [contrastAlgo]);
 
-  // Check if contrast passes threshold
+  // Check if contrast passes the threshold of the active algorithm (0 = no check)
   const passesThreshold = useCallback((contrastValue) => {
-    return Math.abs(contrastValue) >= contrastThreshold;
-  }, [contrastThreshold]);
+    const threshold = contrastAlgo === 'APCA' ? contrastThreshold : wcagThreshold;
+    return threshold > 0 && Math.abs(contrastValue) >= threshold;
+  }, [contrastAlgo, contrastThreshold, wcagThreshold]);
 
   // Reset contrast settings to defaults
   const resetContrastSettings = useCallback(() => {
     setContrastAlgo('APCA');
     setContrastDirection('text-on-bg');
     setContrastThreshold(75);
+    setWcagThreshold(4.5);
     setShowVsWhite(false);
     setVsWhiteColor('#ffffff');
     setShowVsBlack(false);
@@ -58,6 +61,8 @@ export function useContrastSettings() {
     setContrastDirection,
     contrastThreshold,
     setContrastThreshold,
+    wcagThreshold,
+    setWcagThreshold,
     showVsWhite,
     setShowVsWhite,
     vsWhiteColor,

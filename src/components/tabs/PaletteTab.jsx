@@ -10,7 +10,7 @@ export function PaletteTab() {
   const { themeOpen, setThemeOpen, colorModelOpen, setColorModelOpen, contrastOpen, setContrastOpen } = ctx;
 
   const { isDark, currentBg, currentBgHex, cardBg, borderColor, inputBg, textColor, textMuted, effectiveColorSpace, nativeColorSpace, previewColorSpace } = theme;
-  const { palette, stops, hues, updateStop, updateHue } = paletteData;
+  const { palette, stops, updateStop, updateHue } = paletteData;
   const {
     showOKLCH, setShowOKLCH, showSRGB, setShowSRGB, showP3, setShowP3, showGamutWarn, setShowGamutWarn,
     swatchSize, swatchTextMode, setSwatchTextMode, swatchTextShade, setSwatchTextShade,
@@ -19,10 +19,11 @@ export function PaletteTab() {
   } = display;
   const {
     contrastAlgo, setContrastAlgo, contrastDirection, setContrastDirection, contrastThreshold, setContrastThreshold,
+    wcagThreshold, setWcagThreshold,
     showVsWhite, setShowVsWhite, vsWhiteColor, setVsWhiteColor,
     showVsBlack, setShowVsBlack, vsBlackColor, setVsBlackColor,
     showVsBg, setShowVsBg, showVsShade, setShowVsShade, contrastShade, setContrastShade,
-    getContrast, formatContrast
+    getContrast, formatContrast, passesThreshold
   } = contrast;
 
   const attrLabels = getAttrLabels(showVsWhite, showVsBlack, showVsBg, showVsShade, contrastShade);
@@ -66,7 +67,7 @@ export function PaletteTab() {
               <div className="flex gap-1.5 items-center">
                 <input
                   type="color"
-                  value={theme.bgColorLight}
+                  value={cssColorToHex(theme.bgColorLight)}
                   onChange={(e) => theme.setBgColorLight(e.target.value)}
                   className="w-5 h-5 flex-shrink-0 rounded cursor-pointer border-0"
                 />
@@ -82,7 +83,7 @@ export function PaletteTab() {
               <div className="flex gap-1.5 items-center">
                 <input
                   type="color"
-                  value={theme.bgColorDark}
+                  value={cssColorToHex(theme.bgColorDark)}
                   onChange={(e) => theme.setBgColorDark(e.target.value)}
                   className="w-5 h-5 flex-shrink-0 rounded cursor-pointer border-0"
                 />
@@ -325,6 +326,22 @@ export function PaletteTab() {
                   </select>
                 </div>
               )}
+              {contrastAlgo === 'WCAG' && (
+                <div className="pt-2" style={{ borderTop: `1px solid ${borderColor}` }}>
+                  <label className="text-xs block mb-1.5" style={labelStyle}>Check contrast</label>
+                  <select
+                    value={wcagThreshold}
+                    onChange={(e) => setWcagThreshold(Number(e.target.value))}
+                    className="w-full px-2 py-1 rounded text-xs border"
+                    style={inputStyle}
+                  >
+                    <option value={0}>None</option>
+                    <option value={7}>7:1 AAA</option>
+                    <option value={4.5}>4.5:1 AA</option>
+                    <option value={3}>3:1 AA Large / UI</option>
+                  </select>
+                </div>
+              )}
             </div>
           )}
         </div>
@@ -430,9 +447,6 @@ export function PaletteTab() {
                         ? getContrast(colorHexForContrast, displayColors.find((c) => c.stop === contrastShade)?.hex || '#fff')
                         : null;
 
-                      const checkThreshold = (val) =>
-                        contrastThreshold === 0 || contrastAlgo !== 'APCA' || Math.abs(val) >= contrastThreshold;
-
                       return (
                         <div key={idx} style={{ minWidth: swatchSize, width: swatchSize }}>
                           <Tooltip content={`Click to copy ${color.hex}`} isDark={isDark}>
@@ -500,7 +514,7 @@ export function PaletteTab() {
                             {showVsWhite && (
                               <ContrastLabel
                                 value={formatContrast(contrastW)}
-                                passes={contrastThreshold > 0 && checkThreshold(contrastW)}
+                                passes={passesThreshold(contrastW)}
                                 textColor={textColor}
                                 textMuted={textMuted}
                                 swatchSize={swatchSize}
@@ -509,7 +523,7 @@ export function PaletteTab() {
                             {showVsBlack && (
                               <ContrastLabel
                                 value={formatContrast(contrastB)}
-                                passes={contrastThreshold > 0 && checkThreshold(contrastB)}
+                                passes={passesThreshold(contrastB)}
                                 textColor={textColor}
                                 textMuted={textMuted}
                                 swatchSize={swatchSize}
@@ -518,7 +532,7 @@ export function PaletteTab() {
                             {showVsBg && (
                               <ContrastLabel
                                 value={formatContrast(contrastBg)}
-                                passes={contrastThreshold > 0 && checkThreshold(contrastBg)}
+                                passes={passesThreshold(contrastBg)}
                                 textColor={textColor}
                                 textMuted={textMuted}
                                 swatchSize={swatchSize}
@@ -527,7 +541,7 @@ export function PaletteTab() {
                             {showVsShade && (
                               <ContrastLabel
                                 value={formatContrast(contrastS)}
-                                passes={contrastThreshold > 0 && checkThreshold(contrastS)}
+                                passes={passesThreshold(contrastS)}
                                 textColor={textColor}
                                 textMuted={textMuted}
                                 swatchSize={swatchSize}
