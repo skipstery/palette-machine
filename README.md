@@ -58,3 +58,7 @@ src/
 ## Built with
 
 React 19 · Vite · Tailwind CSS 4 · Vitest · lucide-react
+
+## License
+
+[MIT](LICENSE)
