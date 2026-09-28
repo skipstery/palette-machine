@@ -2,13 +2,13 @@ import React, { useEffect } from 'react';
 import { Copy, Check } from 'lucide-react';
 import { usePalette } from '../../context/PaletteContext';
 import { generateExport } from '../../lib/exportGenerators';
+import { normalizeConfig } from '../../utils/config';
 
 export function JsonTab() {
   const ctx = usePalette();
   const {
     theme,
     paletteData,
-    display,
     inputStyle,
     labelStyle,
     copiedIndex,
@@ -19,46 +19,23 @@ export function JsonTab() {
     setJsonError,
     exportFormat,
     setExportFormat,
+    currentConfig,
+    applyConfig,
   } = ctx;
 
   const { isDark, cardBg, borderColor, textColor } = theme;
-  const { stops, hues, setStops, setHues, setTokens, palette, tokens } = paletteData;
-  const { swatchSize } = display;
+  const { stops, palette, tokens } = paletteData;
+  const currentConfigJson = JSON.stringify(currentConfig, null, 2);
 
   // Sync JSON editor when switching to JSON tab or when data changes
   useEffect(() => {
-    setJsonEditValue(
-      JSON.stringify(
-        {
-          stops,
-          hues,
-          settings: {
-            bgColorLight: theme.bgColorLight,
-            bgColorDark: theme.bgColorDark,
-            swatchSize,
-          },
-        },
-        null,
-        2
-      )
-    );
+    setJsonEditValue(currentConfigJson);
     setJsonError(null);
-  }, [stops, hues, theme.bgColorLight, theme.bgColorDark, swatchSize, setJsonEditValue, setJsonError]);
+  }, [currentConfigJson, setJsonEditValue, setJsonError]);
 
   const handleApplyJson = () => {
     try {
-      const config = JSON.parse(jsonEditValue);
-      if (config.stops) setStops(config.stops);
-      if (config.hues) setHues(config.hues);
-      if (config.tokens) setTokens(config.tokens);
-      if (config.settings) {
-        if (config.settings.bgColorLight)
-          theme.setBgColorLight(config.settings.bgColorLight);
-        if (config.settings.bgColorDark)
-          theme.setBgColorDark(config.settings.bgColorDark);
-        if (config.settings.swatchSize)
-          display.setSwatchSize(config.settings.swatchSize);
-      }
+      applyConfig(normalizeConfig(JSON.parse(jsonEditValue)));
       setJsonError(null);
     } catch (err) {
       setJsonError(err.message);
@@ -90,24 +67,7 @@ export function JsonTab() {
               </div>
               <div className="flex gap-2">
                 <button
-                  onClick={() =>
-                    copyToClipboard(
-                      JSON.stringify(
-                        {
-                          stops,
-                          hues,
-                          settings: {
-                            bgColorLight: theme.bgColorLight,
-                            bgColorDark: theme.bgColorDark,
-                            swatchSize,
-                          },
-                        },
-                        null,
-                        2
-                      ),
-                      'json-copy'
-                    )
-                  }
+                  onClick={() => copyToClipboard(currentConfigJson, 'json-copy')}
                   className="px-3 py-1 rounded text-sm flex items-center gap-1"
                   style={{
                     backgroundColor: isDark ? '#333' : '#e5e5e5',
@@ -169,7 +129,8 @@ export function JsonTab() {
                   <option value="json-p3">JSON (P3)</option>
                   <option value="json-oklch">JSON (OKLCH)</option>
                   <option value="css">CSS Variables</option>
-                  <option value="tailwind">Tailwind Config</option>
+                  <option value="tailwind-v4">Tailwind v4 (@theme)</option>
+                  <option value="tailwind">Tailwind v3 Config</option>
                   <option value="scss">SCSS Variables</option>
                 </select>
                 <button

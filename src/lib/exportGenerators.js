@@ -8,7 +8,7 @@
  * @param {Array} palette - Generated palette data
  * @param {Array} stops - Shade stops
  * @param {Object} tokens - Semantic token mappings
- * @param {string} format - Export format (json-srgb, json-p3, json-oklch, css, tailwind, scss)
+ * @param {string} format - Export format (json-srgb, json-p3, json-oklch, css, tailwind, tailwind-v4, scss)
  * @returns {string} Formatted export string
  */
 export const generateExport = (palette, stops, tokens, format) => {
@@ -45,6 +45,10 @@ export const generateExport = (palette, stops, tokens, format) => {
 
   if (format === "tailwind") {
     return exportToTailwind(palette);
+  }
+
+  if (format === "tailwind-v4") {
+    return exportToTailwindTheme(palette);
   }
 
   if (format === "scss") {
@@ -99,13 +103,34 @@ export const exportToTailwind = (palette) => {
     });
   });
 
+  const colorsJs = JSON.stringify(colors, null, 2)
+    .replace(/"/g, "'")
+    .replace(/\n/g, "\n      ");
+
   return `module.exports = {
   theme: {
     extend: {
-      colors: ${JSON.stringify(colors, null, 8).replace(/"/g, "'")}
-    }
-  }
-}`;
+      colors: ${colorsJs},
+    },
+  },
+};
+`;
+};
+
+/**
+ * Export palette as a Tailwind CSS v4 @theme block (OKLCH values)
+ * @param {Array} palette - Generated palette
+ * @returns {string} CSS string
+ */
+export const exportToTailwindTheme = (palette) => {
+  let css = "@theme {\n";
+  palette.forEach((hue) => {
+    hue.colors.forEach((c) => {
+      css += `  --color-${hue.name}-${c.stop}: ${c.oklch};\n`;
+    });
+  });
+  css += "}\n";
+  return css;
 };
 
 /**
