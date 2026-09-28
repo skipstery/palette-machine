@@ -1,11 +1,4 @@
-import {
-  oklchToLinearRgb,
-  oklchToP3,
-  linearToGamma,
-  isInGamut,
-  clamp,
-  rgbToHex,
-} from "./colorConversions";
+import { oklchToColor } from "./colorConversions";
 
 /**
  * Generate a complete color palette from hues and stops
@@ -20,25 +13,10 @@ export const generatePalette = (hues, stops) => {
     fullGray: hue.fullGray,
     colors: stops.map((stop) => {
       const effectiveC = hue.fullGray ? 0 : stop.C;
-
-      // sRGB conversion
-      const [rLin, gLin, bLin] = oklchToLinearRgb(stop.L, effectiveC, hue.H);
-      const inSrgbGamut = isInGamut(rLin, gLin, bLin);
-
-      const rSrgb = linearToGamma(rLin);
-      const gSrgb = linearToGamma(gLin);
-      const bSrgb = linearToGamma(bLin);
-
-      const hex = rgbToHex(clamp(rSrgb), clamp(gSrgb), clamp(bSrgb));
-
-      // P3 conversion
-      const [rP3Lin, gP3Lin, bP3Lin] = oklchToP3(stop.L, effectiveC, hue.H);
-      const inP3Gamut = isInGamut(rP3Lin, gP3Lin, bP3Lin);
-
-      const hexP3 = rgbToHex(
-        linearToGamma(clamp(rP3Lin)),
-        linearToGamma(clamp(gP3Lin)),
-        linearToGamma(clamp(bP3Lin))
+      const { hex, hexP3, clipped, clippedP3 } = oklchToColor(
+        stop.L,
+        effectiveC,
+        hue.H
       );
 
       return {
@@ -49,8 +27,8 @@ export const generatePalette = (hues, stops) => {
         oklch: `oklch(${(stop.L / 100).toFixed(3)} ${effectiveC.toFixed(3)} ${hue.H})`,
         hex,
         hexP3,
-        clipped: !inSrgbGamut,
-        clippedP3: !inP3Gamut,
+        clipped,
+        clippedP3,
       };
     }),
   }));

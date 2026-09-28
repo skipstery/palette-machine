@@ -4,6 +4,11 @@
  */
 
 import { parseAlphaString } from "../utils/helpers";
+import {
+  normalizeHex,
+  oklchToColor,
+  parseOklch,
+} from "../utils/colorConversions";
 
 /**
  * Helper to convert hex to RGB components (0-1)
@@ -13,6 +18,23 @@ const hexToComponents = (hex) => {
   const g = parseInt(hex.slice(3, 5), 16) / 255;
   const b = parseInt(hex.slice(5, 7), 16) / 255;
   return [r, g, b];
+};
+
+/**
+ * Convert a user-entered color (oklch() or hex) to a Figma color value.
+ * OKLCH is converted into the export color profile; hex is used as-is.
+ * @returns {{hex: string, components: number[]} | null}
+ */
+const cssColorToFigmaColor = (color, useP3) => {
+  const oklch = parseOklch(color);
+  if (oklch) {
+    const { hex, hexP3 } = oklchToColor(oklch.L, oklch.C, oklch.H);
+    const value = useP3 ? hexP3 : hex;
+    return { hex: value.toUpperCase(), components: hexToComponents(value) };
+  }
+  const hex = normalizeHex(color);
+  if (hex) return { hex: hex.toUpperCase(), components: hexToComponents(hex) };
+  return null;
 };
 
 /**
@@ -228,21 +250,6 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
     ground2: namingConfig.elevation2,
   };
 
-  // Helper to parse OKLCH string to components
-  const parseOklch = (oklchStr) => {
-    const match = oklchStr.match(
-      /oklch\(\s*([\d.]+)%?\s+([\d.]+)\s+([\d.]+)\s*\)/i
-    );
-    if (!match) return null;
-    const L = parseFloat(match[1]) / 100;
-    const C = parseFloat(match[2]);
-    const H = parseFloat(match[3]);
-    // Convert OKLCH to sRGB (simplified - for now return gray based on L)
-    // TODO: Full OKLCH to sRGB conversion
-    const gray = L;
-    return [gray, gray, gray];
-  };
-
   // Helper to convert Figma path to code syntax
   // Figma path: primary/shade/500 or on/primary/shade/500/60 or on/primary/15
   // Code syntax: primary-500 or on-primary-500/60 or on-primary/15
@@ -356,17 +363,8 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
 
     // Custom OKLCH value
     if (refType === "custom" && customValue) {
-      const components = parseOklch(customValue);
-      if (components) {
-        const toHex = (c) =>
-          Math.round(Math.min(1, Math.max(0, c)) * 255)
-            .toString(16)
-            .padStart(2, "0");
-        const hex = `#${toHex(components[0])}${toHex(components[1])}${toHex(
-          components[2]
-        )}`.toUpperCase();
-        return { hex, components, isReference: false };
-      }
+      const customColor = cssColorToFigmaColor(customValue, useP3);
+      if (customColor) return { ...customColor, isReference: false };
     }
 
     // Theme reference (neutral-X) - returns alias to theme collection
@@ -392,7 +390,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
   };
 
   // Calculate on-color (black or white) based on OKLCH Lightness
-  // Matches palette tab "Auto (by Lightness)" behavior:
+  // (same idea as the palette tab's "Auto (by Lightness)" swatch text, with its own threshold):
   // Use black text when L >= threshold, white text when L < threshold
   // L should be OKLCH lightness (0-100)
   const getOnColor = (oklchL) => {
@@ -513,7 +511,6 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
   }
 
   const groundName = namingConfig.elevation0;
-  const groundColor = getGroundColor("ground");
 
   // Get on-ground color based on configuration (primitive, auto, black, white, or custom)
   const modeOnGroundConfig = isLight ? onGroundColor?.light : onGroundColor?.dark;
@@ -530,10 +527,6 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
         return {
           hex: hexValue,
           components: hexToComponents(hexValue),
-          // Store reference info for alias generation
-          isReference: true,
-          refHue: hueName,
-          refShade: shadeName,
         };
       }
     }
@@ -544,25 +537,8 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
       return { hex: '#FFFFFF', components: [1, 1, 1] };
     }
     if (refType === 'custom' && modeOnGroundConfig?.custom) {
-      // Parse OKLCH custom value
-      const match = modeOnGroundConfig.custom.match(
-        /oklch\(\s*([\d.]+)%?\s+([\d.]+)\s+([\d.]+)\s*\)/i
-      );
-      if (match) {
-        const L = parseFloat(match[1]) / 100;
-        // Simplified: use L for grayscale approximation
-        const val = Math.round(L * 255);
-        const hex = `#${val.toString(16).padStart(2, '0').repeat(3)}`.toUpperCase();
-        return { hex, components: [L, L, L] };
-      }
-      // Try parsing as hex
-      if (modeOnGroundConfig.custom.startsWith('#')) {
-        const hex = modeOnGroundConfig.custom;
-        const r = parseInt(hex.slice(1, 3), 16) / 255;
-        const g = parseInt(hex.slice(3, 5), 16) / 255;
-        const b = parseInt(hex.slice(5, 7), 16) / 255;
-        return { hex: hex.toUpperCase(), components: [r, g, b] };
-      }
+      const customColor = cssColorToFigmaColor(modeOnGroundConfig.custom, useP3);
+      if (customColor) return customColor;
     }
     // Default: auto - calculate from ground color using lightness threshold
     return getOnColor(getGroundColorL("ground"));
@@ -604,26 +580,17 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
       },
       $extensions: makeExtensions(
         existingVarId,
-        `${onGroundPath}/${alpha}`
+        toCodeSyntax(`${onGroundPath}/${alpha}`)
       ),
     };
   });
 
   // Stark tokens - full shade scale with alpha variations
-  const parseStarkOklch = (oklchStr) => {
-    const match = oklchStr.match(
-      /oklch\(\s*([\d.]+)%?\s+([\d.]+)\s+([\d.]+)\s*\)/i
-    );
-    if (!match) return { hex: "#808080", components: [0.5, 0.5, 0.5] };
-    const L = parseFloat(match[1]) / 100;
-    // Simplified: just use L for grayscale (proper OKLCH->sRGB would need full conversion)
-    const val = Math.round(L * 255);
-    const hex = `#${val
-      .toString(16)
-      .padStart(2, "0")
-      .repeat(3)}`.toUpperCase();
-    return { hex, components: [L, L, L] };
-  };
+  const parseStarkOklch = (oklchStr) =>
+    cssColorToFigmaColor(oklchStr, useP3) || {
+      hex: "#808080",
+      components: [0.5, 0.5, 0.5],
+    };
 
   const modeStarkShades = isLight ? starkShades.light : starkShades.dark;
   const modeDefaultStarkShade = isLight
@@ -768,7 +735,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
       },
       $extensions: makeExtensions(
         existingOnStarkAlpha?.$extensions?.["com.figma.variableId"],
-        `${onStarkPath}/${alpha}`
+        toCodeSyntax(`${onStarkPath}/${alpha}`)
       ),
     };
   });
@@ -940,7 +907,7 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
             existingOnIntent[alpha.toString()]?.$extensions?.[
               "com.figma.variableId"
             ],
-            `${getOnIntentPath()}/${alpha}`
+            toCodeSyntax(`${getOnIntentPath()}/${alpha}`)
           ),
         };
       });
@@ -1169,10 +1136,8 @@ export const generateFigmaSemanticTokens = (mode, options, existingFile = null) 
   palette.forEach((hueSet) => {
     const hueName = hueSet.name;
 
-    // Skip hues that are already mapped as intents (avoid duplicates)
-    const isIntent = Object.values(figmaIntentMap).includes(hueName);
-    // Actually, we want both - intent is semantic (primary), hue is raw (blue)
-    // They can coexist: primary -> blue, AND blue directly
+    // Hues are exported even when an intent maps to them:
+    // intent is semantic (primary), hue is raw (blue) - they coexist
 
     // Initialize hue group with optional shade subgroup
     if (shadeGroup) {

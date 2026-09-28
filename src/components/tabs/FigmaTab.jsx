@@ -1,5 +1,5 @@
 import React from 'react';
-import { Copy, Check, Download, RefreshCw, Plus, AlertTriangle } from 'lucide-react';
+import { Copy, Check, Download, RefreshCw, Plus } from 'lucide-react';
 import { usePalette } from '../../context/PaletteContext';
 import { InfoBlock, ConfigSection } from '../UI';
 import { EXPORT_INFO } from '../../config/constants';
@@ -41,14 +41,8 @@ export function FigmaTab() {
     setFigmaGroundLight,
     figmaGroundDark,
     setFigmaGroundDark,
-    groundCustomColors,
-    setGroundCustomColors,
-    groundRefType,
-    setGroundRefType,
     onGroundColor,
     setOnGroundColor,
-    starkShades,
-    setStarkShades,
     starkDefaultShade,
     setStarkDefaultShade,
     figmaIntentMap,
@@ -355,6 +349,7 @@ export function FigmaTab() {
                         reader.onload = (ev) => handlePaletteFileUpload(ev.target.result);
                         reader.readAsText(file);
                       }
+                      e.target.value = ''; // allow re-selecting the same file
                     }}
                     className="hidden"
                   />
@@ -370,7 +365,11 @@ export function FigmaTab() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-amber-500">⚠️ No file - will generate NEW variableIds</p>
+                  parsedPaletteFile?.error ? (
+                    <p className="text-xs text-red-500">✕ Could not parse file: {parsedPaletteFile.error}</p>
+                  ) : (
+                    <p className="text-xs text-amber-500">⚠️ No file - will generate NEW variableIds</p>
+                  )
                 )}
               </div>
 
@@ -408,6 +407,7 @@ export function FigmaTab() {
                         reader.onload = (ev) => handleLightFileUpload(ev.target.result);
                         reader.readAsText(file);
                       }
+                      e.target.value = ''; // allow re-selecting the same file
                     }}
                     className="hidden"
                   />
@@ -427,7 +427,11 @@ export function FigmaTab() {
                     )}
                   </div>
                 ) : (
-                  <p className="text-xs text-amber-500">⚠️ No file - will generate NEW variableIds</p>
+                  parsedLightFile?.error ? (
+                    <p className="text-xs text-red-500">✕ Could not parse file: {parsedLightFile.error}</p>
+                  ) : (
+                    <p className="text-xs text-amber-500">⚠️ No file - will generate NEW variableIds</p>
+                  )
                 )}
               </div>
 
@@ -465,6 +469,7 @@ export function FigmaTab() {
                         reader.onload = (ev) => handleDarkFileUpload(ev.target.result);
                         reader.readAsText(file);
                       }
+                      e.target.value = ''; // allow re-selecting the same file
                     }}
                     className="hidden"
                   />
@@ -472,7 +477,11 @@ export function FigmaTab() {
                 {figmaDarkFile ? (
                   <p className="text-xs text-green-500">✓ File loaded - variableIds will be preserved</p>
                 ) : (
-                  <p className="text-xs text-amber-500">⚠️ No file - will generate NEW variableIds</p>
+                  parsedDarkFile?.error ? (
+                    <p className="text-xs text-red-500">✕ Could not parse file: {parsedDarkFile.error}</p>
+                  ) : (
+                    <p className="text-xs text-amber-500">⚠️ No file - will generate NEW variableIds</p>
+                  )
                 )}
               </div>
             </div>

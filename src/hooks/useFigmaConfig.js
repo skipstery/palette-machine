@@ -1,6 +1,11 @@
 import { useState, useCallback } from 'react';
-import { DEFAULT_ALPHA_CONFIG } from '../config/constants';
-import { analyzePaletteFile, analyzeSemanticFile } from '../utils/fileAnalysis';
+import { DEFAULT_ALPHA_CONFIG, DEFAULT_FIGMA_OPTIONS } from '../config/constants';
+import {
+  analyzePaletteFile,
+  analyzeSemanticFile,
+  createHueMapping,
+  createShadeSourceMap,
+} from '../utils/fileAnalysis';
 import { alphasToString } from '../utils/helpers';
 import {
   generateFigmaPalette as generateFigmaPaletteUtil,
@@ -12,31 +17,17 @@ import {
  */
 export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
   // Ground colors mapping
-  const [figmaGroundLight, setFigmaGroundLight] = useState({
-    ground: '0',
-    ground1: '0',
-    ground2: '0',
-  });
-  const [figmaGroundDark, setFigmaGroundDark] = useState({
-    ground: '1000',
-    ground1: '950',
-    ground2: '900',
-  });
+  const [figmaGroundLight, setFigmaGroundLight] = useState(DEFAULT_FIGMA_OPTIONS.figmaGroundLight);
+  const [figmaGroundDark, setFigmaGroundDark] = useState(DEFAULT_FIGMA_OPTIONS.figmaGroundDark);
 
   // Intent mapping
-  const [figmaIntentMap, setFigmaIntentMap] = useState({
-    primary: 'blue',
-    danger: 'red',
-    warning: 'amber',
-    success: 'green',
-    neutral: 'gray',
-  });
+  const [figmaIntentMap, setFigmaIntentMap] = useState(DEFAULT_FIGMA_OPTIONS.figmaIntentMap);
 
   // Export settings
-  const [figmaDefaultShade, setFigmaDefaultShade] = useState('500');
+  const [figmaDefaultShade, setFigmaDefaultShade] = useState(DEFAULT_FIGMA_OPTIONS.figmaDefaultShade);
   const [figmaExportType, setFigmaExportType] = useState('palette');
   const [semanticPreviewMode, setSemanticPreviewMode] = useState('light');
-  const [figmaColorProfile, setFigmaColorProfile] = useState('p3');
+  const [figmaColorProfile, setFigmaColorProfile] = useState(DEFAULT_FIGMA_OPTIONS.figmaColorProfile);
 
   // File uploads
   const [figmaPaletteFile, setFigmaPaletteFile] = useState(null);
@@ -65,77 +56,26 @@ export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
   const [exclusionPattern, setExclusionPattern] = useState('#');
 
   // Naming convention
-  const [namingConfig, setNamingConfig] = useState({
-    elevation0: 'ground',
-    elevation1: 'ground1',
-    elevation2: 'ground2',
-    foregroundPosition: 'prefix',
-    foregroundModifier: 'on/',
-    foregroundSyntax: 'on-',
-    shadeGroupName: 'shade',
-  });
+  const [namingConfig, setNamingConfig] = useState(DEFAULT_FIGMA_OPTIONS.namingConfig);
 
   // On-color threshold
-  const [onColorThreshold, setOnColorThreshold] = useState(75);
+  const [onColorThreshold, setOnColorThreshold] = useState(DEFAULT_FIGMA_OPTIONS.onColorThreshold);
 
   // Ground custom colors
-  const [groundCustomColors, setGroundCustomColors] = useState({
-    light: { ground: null, ground1: null, ground2: null },
-    dark: { ground: null, ground1: null, ground2: null },
-  });
+  const [groundCustomColors, setGroundCustomColors] = useState(DEFAULT_FIGMA_OPTIONS.groundCustomColors);
 
   // Ground reference type
-  const [groundRefType, setGroundRefType] = useState({
-    light: { ground: 'primitive', ground1: 'primitive', ground2: 'primitive' },
-    dark: { ground: 'primitive', ground1: 'primitive', ground2: 'primitive' },
-  });
+  const [groundRefType, setGroundRefType] = useState(DEFAULT_FIGMA_OPTIONS.groundRefType);
 
   // On-ground color configuration (manual selection instead of auto black/white)
   // refType: 'primitive' (palette reference), 'auto', 'black', 'white', 'custom'
-  const [onGroundColor, setOnGroundColor] = useState({
-    light: { refType: 'primitive', hue: 'gray', shade: '1000' },
-    dark: { refType: 'primitive', hue: 'gray', shade: '0' },
-  });
+  const [onGroundColor, setOnGroundColor] = useState(DEFAULT_FIGMA_OPTIONS.onGroundColor);
 
   // Stark shades
-  const [starkShades, setStarkShades] = useState({
-    light: {
-      0: 'oklch(100% 0 0)',
-      50: 'oklch(97% 0 0)',
-      100: 'oklch(93% 0 0)',
-      200: 'oklch(85% 0 0)',
-      300: 'oklch(73% 0 0)',
-      400: 'oklch(55% 0 0)',
-      500: 'oklch(40% 0 0)',
-      600: 'oklch(30% 0 0)',
-      700: 'oklch(22% 0 0)',
-      800: 'oklch(15% 0 0)',
-      900: 'oklch(10% 0 0)',
-      950: 'oklch(5% 0 0)',
-      1000: 'oklch(0% 0 0)',
-    },
-    dark: {
-      0: 'oklch(0% 0 0)',
-      50: 'oklch(5% 0 0)',
-      100: 'oklch(10% 0 0)',
-      200: 'oklch(18% 0 0)',
-      300: 'oklch(28% 0 0)',
-      400: 'oklch(45% 0 0)',
-      500: 'oklch(60% 0 0)',
-      600: 'oklch(72% 0 0)',
-      700: 'oklch(82% 0 0)',
-      800: 'oklch(90% 0 0)',
-      900: 'oklch(95% 0 0)',
-      950: 'oklch(98% 0 0)',
-      1000: 'oklch(100% 0 0)',
-    },
-  });
+  const [starkShades, setStarkShades] = useState(DEFAULT_FIGMA_OPTIONS.starkShades);
 
   // Stark default shade
-  const [starkDefaultShade, setStarkDefaultShade] = useState({
-    light: '1000',
-    dark: '1000',
-  });
+  const [starkDefaultShade, setStarkDefaultShade] = useState(DEFAULT_FIGMA_OPTIONS.starkDefaultShade);
 
   // Collapsible sections state
   const [exportSections, setExportSections] = useState({
@@ -168,35 +108,14 @@ export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
   // Handle palette file upload
   const handlePaletteFileUpload = useCallback(
     (jsonStr) => {
-      setFigmaPaletteFile(jsonStr);
       const analysis = analyzePaletteFile(jsonStr);
+      // Only keep files that parsed, so generators never see invalid JSON
+      setFigmaPaletteFile(analysis.error ? null : jsonStr);
       setParsedPaletteFile(analysis);
+      if (analysis.error) return;
 
-      // Auto-create hue mapping
-      if (!analysis.error && analysis.hues) {
-        const mapping = {};
-        analysis.hues.forEach((existingHue) => {
-          const normalized = existingHue.toLowerCase();
-          const machineHue = hues.find(
-            (h) =>
-              h.name.toLowerCase() === normalized ||
-              (normalized === 'grey' && h.name === 'gray') ||
-              (normalized === 'gray' && h.name === 'grey')
-          );
-          mapping[existingHue] = machineHue ? machineHue.name : existingHue;
-        });
-        setHueMapping(mapping);
-      }
-
-      // Auto-create shade source map
-      if (!analysis.error && analysis.shades) {
-        const fileShades = new Set(analysis.shades);
-        const sourceMap = {};
-        stops.forEach((stop) => {
-          sourceMap[stop.name] = fileShades.has(stop.name) ? stop.name : 'new';
-        });
-        setShadeSourceMap(sourceMap);
-      }
+      setHueMapping(createHueMapping(analysis.hues, hues));
+      setShadeSourceMap(createShadeSourceMap(analysis.shades, stops));
     },
     [hues, stops]
   );
@@ -204,8 +123,8 @@ export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
   // Handle light file upload
   const handleLightFileUpload = useCallback(
     (jsonStr) => {
-      setFigmaLightFile(jsonStr);
       const analysis = handleAnalyzeSemanticFile(jsonStr);
+      setFigmaLightFile(analysis.error ? null : jsonStr);
       setParsedLightFile(analysis);
 
       // Auto-populate alpha config from file
@@ -236,11 +155,7 @@ export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
           hue.shades?.forEach((s) => fileShades.add(s));
         });
 
-        const sourceMap = {};
-        stops.forEach((stop) => {
-          sourceMap[stop.name] = fileShades.has(stop.name) ? stop.name : 'new';
-        });
-        setThemeShadeSourceMap(sourceMap);
+        setThemeShadeSourceMap(createShadeSourceMap([...fileShades], stops));
       }
     },
     [handleAnalyzeSemanticFile, stops]
@@ -249,8 +164,8 @@ export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
   // Handle dark file upload
   const handleDarkFileUpload = useCallback(
     (jsonStr) => {
-      setFigmaDarkFile(jsonStr);
       const analysis = handleAnalyzeSemanticFile(jsonStr);
+      setFigmaDarkFile(analysis.error ? null : jsonStr);
       setParsedDarkFile(analysis);
     },
     [handleAnalyzeSemanticFile]
@@ -341,7 +256,7 @@ export function useFigmaConfig({ palette, stops, hues, reverseInDark }) {
       };
       countObject(data);
       return count;
-    } catch (e) {
+    } catch {
       return 0;
     }
   }, []);

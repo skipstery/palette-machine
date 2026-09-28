@@ -73,7 +73,7 @@ export const analyzeSemanticFile = (jsonStr, exclusionPattern = "#") => {
     // Find all top-level keys
     Object.keys(data).forEach((key) => {
       if (key.startsWith("$")) return;
-      if (key.startsWith(exclusionPattern)) {
+      if (exclusionPattern && key.startsWith(exclusionPattern)) {
         result.excluded.push(key);
         return;
       }

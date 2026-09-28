@@ -76,31 +76,72 @@ export const hexToRgb = (hex) => {
     : { r: 1, g: 1, b: 1 };
 };
 
-export const cssColorToHex = (color) => {
-  if (!color) return "#000000";
+/**
+ * Normalize "#rgb" / "#rrggbb" (with or without "#") to lowercase "#rrggbb".
+ * Returns null for anything else.
+ */
+export const normalizeHex = (hex) => {
+  if (typeof hex !== "string") return null;
+  const m = /^#?([a-f\d]{3}|[a-f\d]{6})$/i.exec(hex.trim());
+  if (!m) return null;
+  const digits =
+    m[1].length === 3
+      ? m[1]
+          .split("")
+          .map((d) => d + d)
+          .join("")
+      : m[1];
+  return `#${digits.toLowerCase()}`;
+};
 
-  // Already hex
-  if (color.startsWith("#")) return color;
-
-  // OKLCH format: oklch(L C H) or oklch(L% C H)
-  const oklchMatch = color.match(
-    /oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)\s*\)/i
+/**
+ * Parse a CSS oklch() string. Accepts "oklch(62% 0.2 250)" and "oklch(0.62 0.2 250)".
+ * @returns {{L: number, C: number, H: number} | null} L in 0-100
+ */
+export const parseOklch = (color) => {
+  if (typeof color !== "string") return null;
+  const m = color.match(
+    /^\s*oklch\(\s*([\d.]+)(%?)\s+([\d.]+)\s+([\d.]+)(?:deg)?\s*\)\s*$/i
   );
+  if (!m) return null;
+  let L = parseFloat(m[1]);
+  if (m[2] !== "%" && L <= 1) L *= 100;
+  return { L, C: parseFloat(m[3]), H: parseFloat(m[4]) };
+};
 
-  if (oklchMatch) {
-    let L = parseFloat(oklchMatch[1]);
-    if (oklchMatch[2] !== "%" && L <= 1) L = L * 100;
-    const C = parseFloat(oklchMatch[3]);
-    const H = parseFloat(oklchMatch[4]);
-    const [rLin, gLin, bLin] = oklchToLinearRgb(L, C, H);
-    return rgbToHex(
-      linearToGamma(rLin),
-      linearToGamma(gLin),
-      linearToGamma(bLin)
-    );
-  }
+/**
+ * Convert OKLCH to gamut-clipped sRGB and Display P3 hex values.
+ * @param {number} L - Lightness 0-100
+ * @param {number} C - Chroma
+ * @param {number} H - Hue angle in degrees
+ */
+export const oklchToColor = (L, C, H) => {
+  const [rLin, gLin, bLin] = oklchToLinearRgb(L, C, H);
+  const [rP3Lin, gP3Lin, bP3Lin] = oklchToP3(L, C, H);
 
-  // Fallback
+  return {
+    hex: rgbToHex(linearToGamma(rLin), linearToGamma(gLin), linearToGamma(bLin)),
+    hexP3: rgbToHex(
+      linearToGamma(clamp(rP3Lin)),
+      linearToGamma(clamp(gP3Lin)),
+      linearToGamma(clamp(bP3Lin))
+    ),
+    clipped: !isInGamut(rLin, gLin, bLin),
+    clippedP3: !isInGamut(rP3Lin, gP3Lin, bP3Lin),
+  };
+};
+
+/**
+ * Convert a CSS color (hex or oklch()) to an sRGB hex string.
+ * Unsupported formats fall back to black.
+ */
+export const cssColorToHex = (color) => {
+  const hex = normalizeHex(color);
+  if (hex) return hex;
+
+  const oklch = parseOklch(color);
+  if (oklch) return oklchToColor(oklch.L, oklch.C, oklch.H).hex;
+
   return "#000000";
 };
 
