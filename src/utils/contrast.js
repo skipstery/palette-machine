@@ -1,52 +1,59 @@
 import { hexToRgb } from "./colorConversions";
 
+// APCA-W3 constants (SA98G, version 0.0.98G-4g)
+// https://github.com/Myndex/apca-w3
+const APCA = {
+  mainTRC: 2.4,
+  sRco: 0.2126729,
+  sGco: 0.7151522,
+  sBco: 0.072175,
+  normBG: 0.56,
+  normTXT: 0.57,
+  revTXT: 0.62,
+  revBG: 0.65,
+  blkThrs: 0.022,
+  blkClmp: 1.414,
+  scaleBoW: 1.14,
+  scaleWoB: 1.14,
+  loBoWoffset: 0.027,
+  loWoBoffset: 0.027,
+  deltaYmin: 0.0005,
+  loClip: 0.1,
+};
+
+// APCA uses a simple 2.4 power curve instead of the piecewise sRGB transfer function
+const apcaLuminance = (hex) => {
+  const { r, g, b } = hexToRgb(hex);
+  return (
+    APCA.sRco * Math.pow(r, APCA.mainTRC) +
+    APCA.sGco * Math.pow(g, APCA.mainTRC) +
+    APCA.sBco * Math.pow(b, APCA.mainTRC)
+  );
+};
+
+// Soft clamp for near-black luminance
+const clampBlack = (Y) =>
+  Y > APCA.blkThrs ? Y : Y + Math.pow(APCA.blkThrs - Y, APCA.blkClmp);
+
+/**
+ * APCA lightness contrast (Lc) of text on a background.
+ * Positive for dark text on light bg, negative for light text on dark bg.
+ */
 export const calculateAPCA = (textHex, bgHex) => {
-  const txt = hexToRgb(textHex);
-  const bg = hexToRgb(bgHex);
+  const Ytxt = clampBlack(apcaLuminance(textHex));
+  const Ybg = clampBlack(apcaLuminance(bgHex));
 
-  const toLinear = (c) =>
-    c <= 0.04045 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  if (Math.abs(Ybg - Ytxt) < APCA.deltaYmin) return 0;
 
-  const Ytxt =
-    0.2126729 * toLinear(txt.r) +
-    0.7151522 * toLinear(txt.g) +
-    0.072175 * toLinear(txt.b);
-
-  const Ybg =
-    0.2126729 * toLinear(bg.r) +
-    0.7151522 * toLinear(bg.g) +
-    0.072175 * toLinear(bg.b);
-
-  if (Math.abs(Ybg - Ytxt) < 0.0005) return 0;
-
-  const blkThrs = 0.022;
-  const blkClmp = 1.414;
-  const loClip = 0.1;
-
-  let SAPC;
   if (Ybg > Ytxt) {
-    const Sbg =
-      Ybg >= blkThrs
-        ? Math.pow(Ybg, 0.56)
-        : Ybg + Math.pow(blkThrs - Ybg, blkClmp);
-    const Stxt =
-      Ytxt >= blkThrs
-        ? Math.pow(Ytxt, 0.57)
-        : Ytxt + Math.pow(blkThrs - Ytxt, blkClmp);
-    SAPC = (Sbg - Stxt) * 1.14;
-  } else {
-    const Sbg =
-      Ybg >= blkThrs
-        ? Math.pow(Ybg, 0.65)
-        : Ybg + Math.pow(blkThrs - Ybg, blkClmp);
-    const Stxt =
-      Ytxt >= blkThrs
-        ? Math.pow(Ytxt, 0.62)
-        : Ytxt + Math.pow(blkThrs - Ytxt, blkClmp);
-    SAPC = (Sbg - Stxt) * 1.14;
+    const SAPC =
+      (Math.pow(Ybg, APCA.normBG) - Math.pow(Ytxt, APCA.normTXT)) * APCA.scaleBoW;
+    return SAPC < APCA.loClip ? 0 : (SAPC - APCA.loBoWoffset) * 100;
   }
 
-  return Math.abs(SAPC) < loClip ? 0 : SAPC * 100;
+  const SAPC =
+    (Math.pow(Ybg, APCA.revBG) - Math.pow(Ytxt, APCA.revTXT)) * APCA.scaleWoB;
+  return SAPC > -APCA.loClip ? 0 : (SAPC + APCA.loWoBoffset) * 100;
 };
 
 export const calculateWCAG = (fgHex, bgHex) => {
