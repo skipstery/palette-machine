@@ -7,7 +7,7 @@ An OKLCH color palette generator for design systems. Define a lightness/chroma s
 > [!NOTE]
 > This was my first vibe-coding project. It started as a single Claude artifact and grew from there, at one point into a 7,700-line component. Please don't treat it as a polished or production-ready tool: some parts, especially the Figma export, are rough and not fully working. I'm keeping it mostly for history and a bit of nostalgia.
 >
-> The core ideas did last, though: building colors in OKLCH, and generating a whole palette from a few parameters (one lightness/chroma scale × hue angles). They became the foundation for my later work on Seedkit.
+> The core ideas did last, though: building colors in OKLCH, and generating a whole palette from a few parameters (one lightness/chroma scale × hue angles). They became the foundation for my later work on Sid-Kit.
 
 ![Palette Machine: 18 hues × 13 shades with contrast values against the background](docs/screenshot.png)
 
