@@ -1,15 +1,19 @@
-import React, { createContext, useContext, useState, useCallback, useMemo } from 'react';
+import React, { createContext, useContext, useState, useCallback, useMemo, useEffect } from 'react';
 import { useTheme } from '../hooks/useTheme';
 import { usePaletteData } from '../hooks/usePaletteData';
 import { useDisplaySettings } from '../hooks/useDisplaySettings';
 import { useContrastSettings } from '../hooks/useContrastSettings';
 import { useFigmaConfig } from '../hooks/useFigmaConfig';
 import { useHistory, useHistoryKeyboard } from '../hooks/useHistory';
-import { STORAGE_KEY } from '../config/constants';
+import { DEFAULT_SETTINGS } from '../config/constants';
+import { loadSavedConfig, saveConfig } from '../utils/config';
 
 const PaletteContext = createContext(null);
 
 export function PaletteProvider({ children }) {
+  // Config saved in localStorage from the previous session (read once)
+  const [savedConfig] = useState(loadSavedConfig);
+
   // Clipboard state
   const [copiedIndex, setCopiedIndex] = useState(null);
 
@@ -29,9 +33,9 @@ export function PaletteProvider({ children }) {
   const [exportFormat, setExportFormat] = useState('json-srgb');
 
   // Custom hooks
-  const theme = useTheme();
-  const paletteData = usePaletteData();
-  const display = useDisplaySettings();
+  const theme = useTheme(savedConfig.settings);
+  const paletteData = usePaletteData(savedConfig);
+  const display = useDisplaySettings(savedConfig.settings);
   const contrast = useContrastSettings();
   const figma = useFigmaConfig({
     palette: paletteData.palette,
@@ -40,43 +44,50 @@ export function PaletteProvider({ children }) {
     reverseInDark: theme.reverseInDark,
   });
 
-  // History state for tracking
-  const historyState = useMemo(() => ({
+  // Serializable config: persisted, tracked by undo/redo, shown in the JSON tab
+  const currentConfig = useMemo(() => ({
     stops: paletteData.stops,
     hues: paletteData.hues,
     settings: {
       bgColorLight: theme.bgColorLight,
       bgColorDark: theme.bgColorDark,
       swatchSize: display.swatchSize,
+      reverseInDark: theme.reverseInDark,
     },
-  }), [paletteData.stops, paletteData.hues, theme.bgColorLight, theme.bgColorDark, display.swatchSize]);
+  }), [paletteData.stops, paletteData.hues, theme.bgColorLight, theme.bgColorDark, display.swatchSize, theme.reverseInDark]);
+
+  // Persist to localStorage
+  useEffect(() => {
+    saveConfig(currentConfig);
+  }, [currentConfig]);
 
   // History management
-  const history = useHistory(historyState);
+  const history = useHistory(currentConfig);
 
-  // Apply history state
-  const applyHistoryState = useCallback((state) => {
-    if (state) {
-      paletteData.setStops(state.stops);
-      paletteData.setHues(state.hues);
-      if (state.settings) {
-        theme.setBgColorLight(state.settings.bgColorLight);
-        theme.setBgColorDark(state.settings.bgColorDark);
-        display.setSwatchSize(state.settings.swatchSize);
-      }
-    }
-  }, [paletteData, theme, display]);
+  // Apply a (validated) config - used by undo/redo and JSON import
+  const { setStops, setHues, setTokens } = paletteData;
+  const { setBgColorLight, setBgColorDark, setReverseInDark } = theme;
+  const { setSwatchSize } = display;
+  const applyConfig = useCallback((config) => {
+    if (!config) return;
+    if (config.stops) setStops(config.stops);
+    if (config.hues) setHues(config.hues);
+    if (config.tokens) setTokens(config.tokens);
+    const settings = config.settings ?? {};
+    if (settings.bgColorLight) setBgColorLight(settings.bgColorLight);
+    if (settings.bgColorDark) setBgColorDark(settings.bgColorDark);
+    if (settings.swatchSize) setSwatchSize(settings.swatchSize);
+    if (typeof settings.reverseInDark === 'boolean') setReverseInDark(settings.reverseInDark);
+  }, [setStops, setHues, setTokens, setBgColorLight, setBgColorDark, setSwatchSize, setReverseInDark]);
 
   // Undo/redo handlers
   const handleUndo = useCallback(() => {
-    const state = history.undo();
-    applyHistoryState(state);
-  }, [history, applyHistoryState]);
+    applyConfig(history.undo());
+  }, [history, applyConfig]);
 
   const handleRedo = useCallback(() => {
-    const state = history.redo();
-    applyHistoryState(state);
-  }, [history, applyHistoryState]);
+    applyConfig(history.redo());
+  }, [history, applyConfig]);
 
   // Setup keyboard shortcuts
   useHistoryKeyboard(handleUndo, handleRedo);
@@ -88,13 +99,12 @@ export function PaletteProvider({ children }) {
     setTimeout(() => setCopiedIndex(null), 1500);
   }, []);
 
-  // Reset to defaults
+  // Reset to defaults (the persistence effect then saves the defaults)
   const resetToDefaults = useCallback(() => {
-    localStorage.removeItem(STORAGE_KEY);
     paletteData.resetToDefaults();
-    theme.setBgColorLight('oklch(100% 0 0)');
-    theme.setBgColorDark('oklch(25% 0 0)');
-    theme.setReverseInDark(true);
+    theme.setBgColorLight(DEFAULT_SETTINGS.bgColorLight);
+    theme.setBgColorDark(DEFAULT_SETTINGS.bgColorDark);
+    theme.setReverseInDark(DEFAULT_SETTINGS.reverseInDark);
     display.resetDisplaySettings();
     contrast.resetContrastSettings();
     history.resetHistory();
@@ -136,6 +146,10 @@ export function PaletteProvider({ children }) {
     exportFormat,
     setExportFormat,
 
+    // Serializable config
+    currentConfig,
+    applyConfig,
+
     // Hooks
     theme,
     paletteData,
@@ -163,6 +177,7 @@ export function PaletteProvider({ children }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function usePalette() {
   const context = useContext(PaletteContext);
   if (!context) {
@@ -171,4 +186,3 @@ export function usePalette() {
   return context;
 }
 
-export default PaletteContext;

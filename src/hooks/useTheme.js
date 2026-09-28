@@ -1,27 +1,43 @@
 import { useState, useEffect, useMemo } from 'react';
 import { cssColorToHex } from '../utils/colorConversions';
+import { DEFAULT_SETTINGS } from '../config/constants';
+
+const DARK_QUERY = '(prefers-color-scheme: dark)';
+const P3_QUERY = '(color-gamut: p3)';
+
+const matches = (query) =>
+  typeof window !== 'undefined' && window.matchMedia
+    ? window.matchMedia(query).matches
+    : false;
 
 /**
  * Hook for managing theme state (light/dark mode, backgrounds, color spaces)
+ * @param {Object} initialSettings - Saved settings to start from
  */
-export function useTheme() {
-  const [mode, setMode] = useState('light');
-  const [bgColorLight, setBgColorLight] = useState('oklch(100% 0 0)');
-  const [bgColorDark, setBgColorDark] = useState('oklch(25% 0 0)');
-  const [reverseInDark, setReverseInDark] = useState(true);
-  const [nativeColorSpace, setNativeColorSpace] = useState('srgb');
+export function useTheme(initialSettings = {}) {
+  const [mode, setMode] = useState(() => (matches(DARK_QUERY) ? 'dark' : 'light'));
+  const [bgColorLight, setBgColorLight] = useState(
+    initialSettings.bgColorLight ?? DEFAULT_SETTINGS.bgColorLight
+  );
+  const [bgColorDark, setBgColorDark] = useState(
+    initialSettings.bgColorDark ?? DEFAULT_SETTINGS.bgColorDark
+  );
+  const [reverseInDark, setReverseInDark] = useState(
+    initialSettings.reverseInDark ?? DEFAULT_SETTINGS.reverseInDark
+  );
+  const [nativeColorSpace, setNativeColorSpace] = useState(() =>
+    matches(P3_QUERY) ? 'p3' : 'srgb'
+  );
   const [previewColorSpace, setPreviewColorSpace] = useState('native');
 
-  // System theme detection
+  // Follow system theme and display gamut changes
   useEffect(() => {
     if (typeof window !== 'undefined' && window.matchMedia) {
-      const mqTheme = window.matchMedia('(prefers-color-scheme: dark)');
-      setMode(mqTheme.matches ? 'dark' : 'light');
+      const mqTheme = window.matchMedia(DARK_QUERY);
       const handler = (e) => setMode(e.matches ? 'dark' : 'light');
       mqTheme.addEventListener('change', handler);
 
-      const mqP3 = window.matchMedia('(color-gamut: p3)');
-      setNativeColorSpace(mqP3.matches ? 'p3' : 'srgb');
+      const mqP3 = window.matchMedia(P3_QUERY);
       const p3Handler = (e) => setNativeColorSpace(e.matches ? 'p3' : 'srgb');
       mqP3.addEventListener('change', p3Handler);
 

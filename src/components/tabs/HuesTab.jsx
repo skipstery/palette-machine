@@ -6,7 +6,7 @@ import { Tooltip } from '../UI';
 export function HuesTab() {
   const { theme, paletteData, inputStyle, labelStyle } = usePalette();
   const { isDark, cardBg, borderColor } = theme;
-  const { hues, setHues, updateHue } = paletteData;
+  const { hues, updateHue, addHue, removeHue } = paletteData;
 
   return (
     <div className="flex-1 overflow-auto p-6">
@@ -26,12 +26,7 @@ export function HuesTab() {
               </p>
             </div>
             <button
-              onClick={() =>
-                setHues([
-                  ...hues,
-                  { name: `hue-${hues.length}`, H: 0, fullGray: false },
-                ])
-              }
+              onClick={addHue}
               className="flex items-center gap-1 px-2 py-1 bg-blue-600 text-white rounded text-xs hover:bg-blue-700"
             >
               <Plus className="w-3 h-3" /> Add
@@ -81,7 +76,7 @@ export function HuesTab() {
                   </label>
                 </Tooltip>
                 <button
-                  onClick={() => setHues(hues.filter((_, idx) => idx !== i))}
+                  onClick={() => removeHue(i)}
                   className="p-1 text-red-500 hover:bg-red-500/10 rounded"
                   disabled={hues.length === 1}
                 >

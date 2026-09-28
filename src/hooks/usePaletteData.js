@@ -2,19 +2,16 @@ import { useState, useMemo, useCallback } from 'react';
 import { DEFAULT_STOPS, DEFAULT_HUES, DEFAULT_TOKENS } from '../config/constants';
 import { generatePalette } from '../utils/paletteGenerator';
 
+const clone = (value) => JSON.parse(JSON.stringify(value));
+
 /**
  * Hook for managing palette data (stops, hues, tokens)
+ * @param {Object} initial - Saved { stops, hues, tokens } to start from
  */
-export function usePaletteData() {
-  const [stops, setStops] = useState(() =>
-    JSON.parse(JSON.stringify(DEFAULT_STOPS))
-  );
-  const [hues, setHues] = useState(() =>
-    JSON.parse(JSON.stringify(DEFAULT_HUES))
-  );
-  const [tokens, setTokens] = useState(() =>
-    JSON.parse(JSON.stringify(DEFAULT_TOKENS))
-  );
+export function usePaletteData(initial = {}) {
+  const [stops, setStops] = useState(() => initial.stops ?? clone(DEFAULT_STOPS));
+  const [hues, setHues] = useState(() => initial.hues ?? clone(DEFAULT_HUES));
+  const [tokens, setTokens] = useState(() => initial.tokens ?? clone(DEFAULT_TOKENS));
 
   // Generate palette from hues and stops
   const palette = useMemo(() => generatePalette(hues, stops), [hues, stops]);
@@ -49,12 +46,13 @@ export function usePaletteData() {
     );
   }, []);
 
-  // Add a new hue
+  // Add a new hue with a unique name
   const addHue = useCallback(() => {
-    setHues((prev) => [
-      ...prev,
-      { name: `color-${prev.length + 1}`, H: 0, fullGray: false },
-    ]);
+    setHues((prev) => {
+      let n = prev.length + 1;
+      while (prev.some((h) => h.name === `hue-${n}`)) n++;
+      return [...prev, { name: `hue-${n}`, H: 0, fullGray: false }];
+    });
   }, []);
 
   // Remove a hue by index
@@ -62,24 +60,11 @@ export function usePaletteData() {
     setHues((prev) => prev.filter((_, i) => i !== index));
   }, []);
 
-  // Add a new stop
-  const addStop = useCallback(() => {
-    setStops((prev) => [
-      ...prev,
-      { name: `${(prev.length + 1) * 100}`, L: 50, C: 0.1 },
-    ]);
-  }, []);
-
-  // Remove a stop by index
-  const removeStop = useCallback((index) => {
-    setStops((prev) => prev.filter((_, i) => i !== index));
-  }, []);
-
   // Reset to defaults
   const resetToDefaults = useCallback(() => {
-    setStops(JSON.parse(JSON.stringify(DEFAULT_STOPS)));
-    setHues(JSON.parse(JSON.stringify(DEFAULT_HUES)));
-    setTokens(JSON.parse(JSON.stringify(DEFAULT_TOKENS)));
+    setStops(clone(DEFAULT_STOPS));
+    setHues(clone(DEFAULT_HUES));
+    setTokens(clone(DEFAULT_TOKENS));
   }, []);
 
   // Statistics
@@ -118,8 +103,6 @@ export function usePaletteData() {
     updateHue,
     addHue,
     removeHue,
-    addStop,
-    removeStop,
     resetToDefaults,
   };
 }

@@ -1,11 +1,12 @@
 import { useState, useCallback } from 'react';
 import { hexToRgb, hexToGrayscale } from '../utils/colorConversions';
 import { calculateAPCA } from '../utils/contrast';
+import { DEFAULT_SETTINGS } from '../config/constants';
 
 /**
  * Hook for managing display settings (color model visibility, swatch text, etc.)
  */
-export function useDisplaySettings() {
+export function useDisplaySettings(initialSettings = {}) {
   // Color model visibility
   const [showOKLCH, setShowOKLCH] = useState(false);
   const [showSRGB, setShowSRGB] = useState(true);
@@ -14,7 +15,9 @@ export function useDisplaySettings() {
 
   // Preview settings
   const [grayscalePreview, setGrayscalePreview] = useState(false);
-  const [swatchSize, setSwatchSize] = useState(72);
+  const [swatchSize, setSwatchSize] = useState(
+    initialSettings.swatchSize ?? DEFAULT_SETTINGS.swatchSize
+  );
 
   // Swatch text settings
   const [swatchTextMode, setSwatchTextMode] = useState('auto'); // 'auto', 'shade', 'custom', 'fluent', 'body', 'large', 'spot'
@@ -112,7 +115,7 @@ export function useDisplaySettings() {
     setShowP3(false);
     setShowGamutWarn(true);
     setGrayscalePreview(false);
-    setSwatchSize(72);
+    setSwatchSize(DEFAULT_SETTINGS.swatchSize);
     setSwatchTextMode('auto');
     setSwatchTextShade('950');
     setSwatchTextCustom('#ffffff');
